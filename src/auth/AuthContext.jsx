@@ -3,6 +3,7 @@ import { upsertUser } from "../users/userStore.js";
 
 const ADMIN_USER = "admin";
 const ADMIN_PASS = "ark@123";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 
 const AuthContext = createContext(null);
 
@@ -57,7 +58,7 @@ export function AuthProvider({ children }) {
         setCustomer(next);
         upsertUser(next);
         // Best-effort: send login to shared API so admin can see all users across devices.
-        fetch("/api/users/login", {
+        fetch(`${API_BASE}/api/users/login`, {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ name: next.name, email: next.email, phone: next.phone }),
@@ -72,7 +73,7 @@ export function AuthProvider({ children }) {
       },
       logoutAdmin: () => {
         setAdmin(null);
-        fetch("/api/admin/logout", { method: "POST" }).catch(() => {});
+        fetch(`${API_BASE}/api/admin/logout`, { method: "POST" }).catch(() => {});
       },
     }),
     [customer, admin],

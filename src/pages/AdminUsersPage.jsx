@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { listUsers } from "../users/userStore.js";
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+
 function formatDate(iso) {
   try {
     return new Date(iso).toLocaleString();
@@ -16,7 +18,7 @@ export default function AdminUsersPage() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/users");
+      const res = await fetch(`${API_BASE}/api/users`);
       const data = await res.json();
       if (res.ok && data?.ok && Array.isArray(data.users)) {
         setUsers(data.users);

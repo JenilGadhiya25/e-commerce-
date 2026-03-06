@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.jsx";
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+
 export default function AdminLoginPage() {
   const [params] = useSearchParams();
   const redirect = params.get("redirect") || "/admin";
@@ -25,21 +27,32 @@ export default function AdminLoginPage() {
       setError(res.message || "Login failed.");
       return;
     }
+
+    // If no shared API base is configured (e.g. static deployment on Vercel),
+    // treat admin login as purely client-side and don't block on the backend.
+    if (!API_BASE) {
+      setBusy(false);
+      navigate(redirect);
+      return;
+    }
+
     try {
-      const apiRes = await fetch("/api/admin/login", {
+      const apiRes = await fetch(`${API_BASE}/api/admin/login`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ username: username.trim(), password }),
+        credentials: "include",
       });
       const data = await apiRes.json().catch(() => ({}));
       if (!apiRes.ok || !data?.ok) {
-        setError(data?.error || "API admin login failed. Start `npm run api-server`.");
+        setError(data?.error || "Admin API login failed.");
         setBusy(false);
         return;
       }
       navigate(redirect);
     } catch {
-      setError("API admin login failed. Start `npm run api-server`.");
+      // Best-effort only: if API is unreachable in production, still allow local admin session.
+      navigate(redirect);
     } finally {
       setBusy(false);
     }

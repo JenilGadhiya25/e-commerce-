@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { bestSellersCatalog as staticProducts } from "./catalog.js";
 
 const ProductsContext = createContext(null);
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 const BANNED_IMAGE_URL = "https://5.imimg.com/data5/HW/IR/MY-55237267/plastic-bags.jpg";
 
 function normalizeApiProduct(p) {
@@ -51,7 +52,7 @@ export function ProductsProvider({ children }) {
     setStatus("loading");
     setLastError("");
     try {
-      const res = await fetch("/api/products");
+      const res = await fetch(`${API_BASE}/api/products`);
       const data = await res.json();
       if (res.ok && data?.ok && Array.isArray(data.products)) {
         setApiProducts(data.products.map(normalizeApiProduct));
@@ -83,7 +84,7 @@ export function ProductsProvider({ children }) {
       reload,
       async createProduct(payload) {
         try {
-          const res = await fetch("/api/products", {
+          const res = await fetch(`${API_BASE}/api/products`, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify(payload),
@@ -98,7 +99,7 @@ export function ProductsProvider({ children }) {
       },
       async deleteProduct(id) {
         try {
-          const res = await fetch(`/api/products/${encodeURIComponent(id)}`, { method: "DELETE" });
+          const res = await fetch(`${API_BASE}/api/products/${encodeURIComponent(id)}`, { method: "DELETE" });
           const data = await res.json().catch(() => ({}));
           if (!res.ok || !data?.ok) return { ok: false, error: data?.error || "Failed to delete product." };
           await reload();
@@ -109,7 +110,7 @@ export function ProductsProvider({ children }) {
       },
       async updateProduct(id, payload) {
         try {
-          const res = await fetch(`/api/products/${encodeURIComponent(id)}`, {
+          const res = await fetch(`${API_BASE}/api/products/${encodeURIComponent(id)}`, {
             method: "PUT",
             headers: { "content-type": "application/json" },
             body: JSON.stringify(payload),
