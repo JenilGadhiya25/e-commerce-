@@ -1,0 +1,21 @@
+<svg width="520" height="520" viewBox="0 0 520 520" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="pBody" x1="172" y1="78" x2="362" y2="458" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9B6BFF"/>
+      <stop offset="0.55" stop-color="#7C4DFF"/>
+      <stop offset="1" stop-color="#5E37E6"/>
+    </linearGradient>
+    <filter id="pShadow" x="104" y="56" width="312" height="428" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="14" flood-color="#000000" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#pShadow)">
+    <path d="M188 84h144c18 0 32 14 32 32v288c0 18-14 32-32 32H188c-18 0-32-14-32-32V116c0-18 14-32 32-32Z" fill="url(#pBody)"/>
+    <path d="M176 182h168c10 0 18 8 18 18v86c0 10-8 18-18 18H176c-10 0-18-8-18-18v-86c0-10 8-18 18-18Z" fill="#FFFFFF" fill-opacity="0.16" stroke="#FFFFFF" stroke-opacity="0.22"/>
+    <text x="198" y="236" fill="#FFFFFF" font-size="26" font-family="Poppins, Arial" font-weight="800">Hey there!!</text>
+    <text x="192" y="268" fill="#FFFFFF" font-size="24" font-family="Poppins, Arial" font-weight="800">I have arrived!</text>
+    <path d="M188 84h144c18 0 32 14 32 32v288c0 18-14 32-32 32H188c-18 0-32-14-32-32V116c0-18 14-32 32-32Z" stroke="#2E1B83" stroke-opacity="0.22" stroke-width="4"/>
+  </g>
+</svg>
+

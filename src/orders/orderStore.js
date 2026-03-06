@@ -1,0 +1,258 @@
+function safeParse(json, fallback) {
+  try {
+    const value = JSON.parse(json);
+    return value ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function getId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  return `order_${Math.random().toString(16).slice(2)}_${Date.now()}`;
+}
+
+const CACHE_KEY = "ark_orders_cache_v2";
+const LEGACY_KEY = "ark_orders_v1";
+
+function readCache() {
+  const raw = window.localStorage.getItem(CACHE_KEY);
+  if (raw) {
+    const parsed = safeParse(raw, []);
+    return Array.isArray(parsed) ? parsed : [];
+  }
+  // one-time legacy carry over
+  const legacyRaw = window.localStorage.getItem(LEGACY_KEY);
+  const legacy = legacyRaw ? safeParse(legacyRaw, []) : [];
+  const next = Array.isArray(legacy) ? legacy : [];
+  if (next.length) window.localStorage.setItem(CACHE_KEY, JSON.stringify(next));
+  return next;
+}
+
+function writeCache(orders) {
+  window.localStorage.setItem(CACHE_KEY, JSON.stringify(Array.isArray(orders) ? orders : []));
+  try {
+    window.dispatchEvent(new Event("ark_orders_changed"));
+  } catch {
+    // ignore
+  }
+}
+
+async function apiJson(url, options) {
+  const res = await fetch(url, options);
+  const data = await res.json().catch(() => ({}));
+  return { res, data };
+}
+
+export function listOrders() {
+  return readCache();
+}
+
+export function saveOrders(orders) {
+  writeCache(orders);
+}
+
+export function getOrder(orderId) {
+  return listOrders().find((o) => o.id === orderId) || null;
+}
+
+export async function refreshOrders({ customerId } = {}) {
+  const url = customerId ? `/api/orders?customerId=${encodeURIComponent(customerId)}` : "/api/orders";
+  try {
+    const { res, data } = await apiJson(url);
+    if (!res.ok || !data?.ok || !Array.isArray(data.orders)) return { ok: false };
+    writeCache(data.orders);
+    return { ok: true, orders: data.orders };
+  } catch {
+    return { ok: false };
+  }
+}
+
+export async function createOrder({ customer, items, subtotal }) {
+  try {
+    const { res, data } = await apiJson("/api/orders", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ customer, items, subtotal }),
+    });
+    if (!res.ok || !data?.ok || !data.order) {
+      // fallback local
+      const order = {
+        id: getId(),
+        createdAt: new Date().toISOString(),
+        status: "PENDING",
+        removedAt: null,
+        cancelledAt: null,
+        etaDays: null,
+        paymentStatus: "PENDING",
+        paidAt: null,
+        customer,
+        items,
+        subtotal,
+      };
+      saveOrders([order, ...listOrders()]);
+      return order;
+    }
+    saveOrders([data.order, ...listOrders().filter((o) => o.id !== data.order.id)]);
+    return data.order;
+  } catch {
+    const order = {
+      id: getId(),
+      createdAt: new Date().toISOString(),
+      status: "PENDING",
+      removedAt: null,
+      cancelledAt: null,
+      etaDays: null,
+      paymentStatus: "PENDING",
+      paidAt: null,
+      customer,
+      items,
+      subtotal,
+    };
+    saveOrders([order, ...listOrders()]);
+    return order;
+  }
+}
+
+export function updateOrder(orderId, updater) {
+  const orders = listOrders();
+  const idx = orders.findIndex((o) => o.id === orderId);
+  if (idx < 0) return null;
+  const next = { ...orders[idx], ...updater(orders[idx]) };
+  const nextOrders = [...orders];
+  nextOrders[idx] = next;
+  saveOrders(nextOrders);
+  return next;
+}
+
+export async function removeOrderByCustomer({ orderId, customerId }) {
+  try {
+    const { res, data } = await apiJson(`/api/orders/${encodeURIComponent(orderId)}/remove`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ customerId }),
+    });
+    if (res.ok && data?.ok && data.order) {
+      updateOrder(orderId, () => data.order);
+      return data.order;
+    }
+  } catch {
+    // ignore
+  }
+  return updateOrder(orderId, (o) => {
+    if (o.customer?.id !== customerId) return {};
+    if (o.status === "REMOVED") return {};
+    return { status: "REMOVED", removedAt: new Date().toISOString() };
+  });
+}
+
+export async function cancelOrderByCustomer({ orderId, customerId }) {
+  try {
+    const { res, data } = await apiJson(`/api/orders/${encodeURIComponent(orderId)}/cancel`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ customerId }),
+    });
+    if (res.ok && data?.ok && data.order) {
+      updateOrder(orderId, () => data.order);
+      return data.order;
+    }
+  } catch {
+    // ignore
+  }
+  return updateOrder(orderId, (o) => {
+    if (o.customer?.id !== customerId) return {};
+    if (o.status === "CANCELLED") return {};
+    if (o.status === "REMOVED") return {};
+    return { status: "CANCELLED", cancelledAt: new Date().toISOString() };
+  });
+}
+
+export function listOrdersByCustomer(customerId) {
+  return listOrders().filter((o) => o.customer?.id === customerId);
+}
+
+export async function setOrderEtaDays({ orderId, etaDays }) {
+  const n = etaDays === null || etaDays === "" ? null : Number(etaDays);
+  if (n !== null && (!Number.isFinite(n) || n < 0)) return null;
+  try {
+    const { res, data } = await apiJson(`/api/orders/${encodeURIComponent(orderId)}/eta`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ etaDays: n }),
+    });
+    if (res.ok && data?.ok && data.order) {
+      updateOrder(orderId, () => data.order);
+      return data.order;
+    }
+  } catch {
+    // ignore
+  }
+  return updateOrder(orderId, () => ({ etaDays: n === null ? null : Math.round(n) }));
+}
+
+export async function markOrderPaid(orderId) {
+  try {
+    const { res, data } = await apiJson(`/api/orders/${encodeURIComponent(orderId)}/paid`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    if (res.ok && data?.ok && data.order) {
+      updateOrder(orderId, () => data.order);
+      return data.order;
+    }
+  } catch {
+    // ignore
+  }
+  return updateOrder(orderId, (o) => {
+    if (o.paymentStatus === "PAID") return {};
+    return { paymentStatus: "PAID", paidAt: new Date().toISOString() };
+  });
+}
+
+export function confirmOrderByAdmin(orderId) {
+  // Legacy sync fallback: prefer async confirmOrderByAdminApi below.
+  return updateOrder(orderId, (o) => {
+    if (o.status === "CONFIRMED") return {};
+    return { status: "CONFIRMED", cancelledAt: null, removedAt: null };
+  });
+}
+
+export function deleteOrderByAdmin(orderId) {
+  const existing = listOrders();
+  const next = existing.filter((o) => o.id !== orderId);
+  if (next.length === existing.length) return false;
+  saveOrders(next);
+  return true;
+}
+
+export async function confirmOrderByAdminApi(orderId) {
+  try {
+    const { res, data } = await apiJson(`/api/orders/${encodeURIComponent(orderId)}/confirm`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    if (res.ok && data?.ok && data.order) {
+      updateOrder(orderId, () => data.order);
+      return data.order;
+    }
+  } catch {
+    // ignore
+  }
+  return confirmOrderByAdmin(orderId);
+}
+
+export async function deleteOrderByAdminApi(orderId) {
+  try {
+    const { res, data } = await apiJson(`/api/orders/${encodeURIComponent(orderId)}`, { method: "DELETE" });
+    if (res.ok && data?.ok) {
+      deleteOrderByAdmin(orderId);
+      return true;
+    }
+  } catch {
+    // ignore
+  }
+  return deleteOrderByAdmin(orderId);
+}

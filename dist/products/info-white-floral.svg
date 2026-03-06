@@ -1,0 +1,33 @@
+<svg width="520" height="520" viewBox="0 0 520 520" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="wBody" x1="172" y1="78" x2="362" y2="458" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="0.6" stop-color="#F3F5F8"/>
+      <stop offset="1" stop-color="#E6EBF2"/>
+    </linearGradient>
+    <linearGradient id="wGloss" x1="212" y1="132" x2="312" y2="366" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.8"/>
+      <stop offset="0.35" stop-color="#FFFFFF" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="wShadow" x="104" y="56" width="312" height="428" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="14" flood-color="#000000" flood-opacity="0.14"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#wShadow)">
+    <path d="M188 84h144c18 0 32 14 32 32v288c0 18-14 32-32 32H188c-18 0-32-14-32-32V116c0-18 14-32 32-32Z" fill="url(#wBody)"/>
+    <path d="M156 150c36-14 72-18 108-8 36 10 72 8 108-6v38c-36 14-72 16-108 6-36-10-72-6-108 8v-38Z" fill="#DDE6F3" fill-opacity="0.65"/>
+    <path d="M212 128c10-4 22-6 36-4 16 2 30 6 44 10 16 6 32 8 48 6v254c-12 2-24 0-36-4-26-8-48-18-72-24-20-6-40-4-58 6V128Z" fill="url(#wGloss)"/>
+    <path d="M188 84h144c18 0 32 14 32 32v288c0 18-14 32-32 32H188c-18 0-32-14-32-32V116c0-18 14-32 32-32Z" stroke="#222222" stroke-opacity="0.12" stroke-width="4"/>
+
+    <g opacity="0.75">
+      <path d="M212 242c6-10 18-14 28-6 10-8 22-4 28 6-6 10-18 14-28 6-10 8-22 4-28-6Z" fill="#FF6AAE" fill-opacity="0.22"/>
+      <path d="M244 226c3-6 10-10 16-6 6-4 13 0 16 6-3 6-10 10-16 6-6 4-13 0-16-6Z" fill="#2A7DE1" fill-opacity="0.18"/>
+      <path d="M258 262c4-8 14-12 22-6 8-6 18-2 22 6-4 8-14 12-22 6-8 6-18 2-22-6Z" fill="#2F7A4B" fill-opacity="0.14"/>
+      <path d="M210 302c4-8 14-12 22-6 8-6 18-2 22 6-4 8-14 12-22 6-8 6-18 2-22-6Z" fill="#FF6AAE" fill-opacity="0.18"/>
+      <path d="M266 320c3-6 10-10 16-6 6-4 13 0 16 6-3 6-10 10-16 6-6 4-13 0-16-6Z" fill="#2A7DE1" fill-opacity="0.16"/>
+    </g>
+  </g>
+</svg>
+

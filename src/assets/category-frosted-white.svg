@@ -1,0 +1,22 @@
+<svg width="520" height="420" viewBox="0 0 520 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g4" x1="156" y1="48" x2="364" y2="372" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="0.6" stop-color="#F2F4F7"/>
+      <stop offset="1" stop-color="#E6EAF0"/>
+    </linearGradient>
+    <filter id="s4" x="88" y="32" width="344" height="384" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="14" flood-color="#000" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#s4)">
+    <path d="M170 56h180c18 0 32 14 32 32v244c0 18-14 32-32 32H170c-18 0-32-14-32-32V88c0-18 14-32 32-32Z" fill="url(#g4)"/>
+    <path d="M170 56h180c18 0 32 14 32 32v244c0 18-14 32-32 32H170c-18 0-32-14-32-32V88c0-18 14-32 32-32Z" fill="#FFFFFF" fill-opacity="0.35"/>
+    <circle cx="320" cy="168" r="54" fill="#FFFFFF" fill-opacity="0.65" stroke="#2A7DE1" stroke-opacity="0.25" stroke-width="3"/>
+    <text x="285" y="160" fill="#333333" fill-opacity="0.75" font-size="14" font-family="Poppins, Arial" font-weight="800" letter-spacing="0.6">YOUR DESIGN</text>
+    <text x="304" y="182" fill="#333333" fill-opacity="0.75" font-size="14" font-family="Poppins, Arial" font-weight="800" letter-spacing="0.6">HERE</text>
+    <path d="M170 56h180c18 0 32 14 32 32v244c0 18-14 32-32 32H170c-18 0-32-14-32-32V88c0-18 14-32 32-32Z" stroke="#222222" stroke-opacity="0.12" stroke-width="4"/>
+  </g>
+</svg>
+

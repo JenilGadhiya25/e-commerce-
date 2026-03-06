@@ -1,0 +1,31 @@
+[
+  {
+    "id": "order_7c9e457dba7f4_1772771095543",
+    "createdAt": "2026-03-06T04:24:55.543Z",
+    "status": "CONFIRMED",
+    "removedAt": null,
+    "cancelledAt": null,
+    "etaDays": null,
+    "paymentStatus": "PENDING",
+    "paidAt": null,
+    "customer": {
+      "id": "jenilgadhiya918@gmail.com",
+      "name": "gadhiya jenil",
+      "email": "jenilgadhiya918@gmail.com",
+      "phone": "1234567890",
+      "createdAt": "2026-03-06T04:24:45.188Z"
+    },
+    "items": [
+      {
+        "key": "plain-frosted-14x18::",
+        "id": "plain-frosted-14x18",
+        "title": "14 X 18 Inch Plain Frosted Zipper Bags",
+        "image": "/src/assets/product-frosted-plain.svg",
+        "price": 26.55,
+        "options": null,
+        "qty": 1
+      }
+    ],
+    "subtotal": 26.55
+  }
+]

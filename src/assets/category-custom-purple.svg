@@ -1,0 +1,22 @@
+<svg width="520" height="420" viewBox="0 0 520 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g2" x1="156" y1="48" x2="364" y2="372" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9B6BFF"/>
+      <stop offset="0.55" stop-color="#7C4DFF"/>
+      <stop offset="1" stop-color="#5E37E6"/>
+    </linearGradient>
+    <filter id="s2" x="88" y="32" width="344" height="384" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="14" flood-color="#000" flood-opacity="0.14"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#s2)">
+    <path d="M170 56h180c18 0 32 14 32 32v244c0 18-14 32-32 32H170c-18 0-32-14-32-32V88c0-18 14-32 32-32Z" fill="url(#g2)"/>
+    <path d="M150 124h220c8 0 14 6 14 14v102c0 8-6 14-14 14H150c-8 0-14-6-14-14V138c0-8 6-14 14-14Z" fill="#FFFFFF" fill-opacity="0.16" stroke="#FFFFFF" stroke-opacity="0.22"/>
+    <text x="182" y="170" fill="#FFFFFF" font-size="28" font-family="Poppins, Arial" font-weight="800" letter-spacing="1.2">YOUR</text>
+    <text x="198" y="204" fill="#FFFFFF" font-size="28" font-family="Poppins, Arial" font-weight="800" letter-spacing="0.6">Brand</text>
+    <text x="202" y="238" fill="#FFFFFF" font-size="28" font-family="Poppins, Arial" font-weight="800" letter-spacing="1.2">HERE</text>
+    <path d="M170 56h180c18 0 32 14 32 32v244c0 18-14 32-32 32H170c-18 0-32-14-32-32V88c0-18 14-32 32-32Z" stroke="#2E1B83" stroke-opacity="0.25" stroke-width="4"/>
+  </g>
+</svg>
+

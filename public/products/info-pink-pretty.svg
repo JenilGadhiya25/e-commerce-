@@ -1,0 +1,23 @@
+<svg width="520" height="520" viewBox="0 0 520 520" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="pkBody" x1="172" y1="78" x2="362" y2="458" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF7DB5"/>
+      <stop offset="0.55" stop-color="#FF4FA1"/>
+      <stop offset="1" stop-color="#F02E8A"/>
+    </linearGradient>
+    <filter id="pkShadow" x="104" y="56" width="312" height="428" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="14" flood-color="#000000" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#pkShadow)">
+    <path d="M188 84h144c18 0 32 14 32 32v288c0 18-14 32-32 32H188c-18 0-32-14-32-32V116c0-18 14-32 32-32Z" fill="url(#pkBody)"/>
+    <path d="M204 212h112c10 0 18 8 18 18v74c0 10-8 18-18 18H204c-10 0-18-8-18-18v-74c0-10 8-18 18-18Z" fill="#FFFFFF" fill-opacity="0.12" stroke="#FFFFFF" stroke-opacity="0.18"/>
+    <circle cx="230" cy="248" r="6" fill="#FFFFFF" fill-opacity="0.9"/>
+    <circle cx="290" cy="248" r="6" fill="#FFFFFF" fill-opacity="0.9"/>
+    <path d="M222 270c6 10 14 16 30 16s24-6 30-16" stroke="#FFFFFF" stroke-opacity="0.9" stroke-width="4" stroke-linecap="round"/>
+    <text x="178" y="360" fill="#FFFFFF" fill-opacity="0.92" font-size="22" font-family="Poppins, Arial" font-weight="800">Pretty Thing Inside</text>
+    <path d="M188 84h144c18 0 32 14 32 32v288c0 18-14 32-32 32H188c-18 0-32-14-32-32V116c0-18 14-32 32-32Z" stroke="#D61E73" stroke-opacity="0.28" stroke-width="4"/>
+  </g>
+</svg>
+

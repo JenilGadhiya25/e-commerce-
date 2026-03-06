@@ -1,0 +1,133 @@
+{
+  "info": {
+    "name": "ARK Packaging - API",
+    "_postman_id": "f4e09f6a-7cf8-4c1f-9a7d-0d57c9a90f6a",
+    "description": "API collection for users and orders (dev server).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:5175" },
+    { "key": "adminKey", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/health"
+      }
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/users"
+          }
+        },
+        {
+          "name": "Login User (Upsert)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Vipul Sharma\",\n  \"email\": \"vipul@example.com\",\n  \"phone\": \"+91 99999 11111\"\n}"
+            },
+            "url": "{{baseUrl}}/api/users/login"
+          }
+        },
+        {
+          "name": "Get User By ID (email)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/users/vipul@example.com"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "List Orders",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/orders"
+          }
+        },
+        {
+          "name": "List Orders By Customer",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/orders?customerId=vipul@example.com"
+          }
+        },
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer\": {\n    \"id\": \"vipul@example.com\",\n    \"name\": \"Vipul Sharma\",\n    \"email\": \"vipul@example.com\",\n    \"phone\": \"+91 99999 11111\"\n  },\n  \"items\": [\n    {\n      \"key\": \"custom-pink::{}\",\n      \"id\": \"custom-pink-courier-60\",\n      \"title\": \"Custom Printed Pink Courier Bags – 60 micron\",\n      \"image\": \"\",\n      \"price\": 1140,\n      \"qty\": 1,\n      \"options\": {\n        \"size\": \"6.5x8\",\n        \"pack\": \"100\",\n        \"print\": \"Standard Color\",\n        \"pocket\": \"Without Pocket\"\n      }\n    }\n  ],\n  \"subtotal\": 1140\n}"
+            },
+            "url": "{{baseUrl}}/api/orders"
+          }
+        },
+        {
+          "name": "Get Order By ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/orders/{{orderId}}"
+          }
+        },
+        {
+          "name": "Cancel Order (Customer)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"customerId\": \"vipul@example.com\"\n}" },
+            "url": "{{baseUrl}}/api/orders/{{orderId}}/cancel"
+          }
+        },
+        {
+          "name": "Remove Order (Customer)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"customerId\": \"vipul@example.com\"\n}" },
+            "url": "{{baseUrl}}/api/orders/{{orderId}}/remove"
+          }
+        },
+        {
+          "name": "Set ETA Days (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-admin-key", "value": "{{adminKey}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"etaDays\": 2\n}" },
+            "url": "{{baseUrl}}/api/orders/{{orderId}}/eta"
+          }
+        },
+        {
+          "name": "Mark Paid (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-admin-key", "value": "{{adminKey}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": "{{baseUrl}}/api/orders/{{orderId}}/paid"
+          }
+        }
+      ]
+    }
+  ]
+}
+

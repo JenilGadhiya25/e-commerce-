@@ -1,0 +1,25 @@
+<svg width="520" height="420" viewBox="0 0 520 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g1" x1="156" y1="48" x2="364" y2="372" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF7DB5"/>
+      <stop offset="0.55" stop-color="#FF4FA1"/>
+      <stop offset="1" stop-color="#F02E8A"/>
+    </linearGradient>
+    <linearGradient id="gloss1" x1="192" y1="86" x2="312" y2="308" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.65"/>
+      <stop offset="0.35" stop-color="#FFFFFF" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="s1" x="88" y="32" width="344" height="384" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="14" flood-color="#000" flood-opacity="0.14"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#s1)">
+    <path d="M170 56h180c18 0 32 14 32 32v244c0 18-14 32-32 32H170c-18 0-32-14-32-32V88c0-18 14-32 32-32Z" fill="url(#g1)"/>
+    <path d="M138 120c44-18 88-22 132-10 44 12 88 10 132-6v40c-44 16-88 18-132 6-44-12-88-8-132 10v-40Z" fill="#FFB6D5" fill-opacity="0.55"/>
+    <path d="M188 86c12-4 26-6 42-4 18 2 34 6 50 12 18 8 36 10 54 8v214c-14 2-28 0-42-4-30-10-54-22-82-28-24-6-46-4-68 6V86Z" fill="url(#gloss1)"/>
+    <path d="M170 56h180c18 0 32 14 32 32v244c0 18-14 32-32 32H170c-18 0-32-14-32-32V88c0-18 14-32 32-32Z" stroke="#D61E73" stroke-opacity="0.3" stroke-width="4"/>
+  </g>
+</svg>
+
