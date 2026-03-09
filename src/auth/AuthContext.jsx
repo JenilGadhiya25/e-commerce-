@@ -3,8 +3,8 @@ import { upsertUser } from "../users/userStore.js";
 
 const ADMIN_USER = "admin";
 const ADMIN_PASS = "ark@123";
-// Use same-origin /api in production; allow overriding with VITE_API_BASE_URL.
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+// Only use VITE_API_BASE_URL in development; in production we skip API calls.
+const API_BASE = import.meta.env.DEV ? import.meta.env.VITE_API_BASE_URL || "" : "";
 
 const AuthContext = createContext(null);
 
@@ -43,26 +43,6 @@ export function AuthProvider({ children }) {
     else window.sessionStorage.removeItem("ark_admin_v1");
   }, [admin]);
 
-  // Restore admin session (cookie-based) across reloads/devices.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/admin/me`, { credentials: "include" });
-        const data = await res.json().catch(() => ({}));
-        if (cancelled) return;
-        if (res.ok && data?.ok && data.admin?.username) {
-          setAdmin({ username: data.admin.username, loggedInAt: data.admin.createdAt || new Date().toISOString() });
-        }
-      } catch {
-        // ignore
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const api = useMemo(
     () => ({
       customer,
@@ -86,34 +66,15 @@ export function AuthProvider({ children }) {
         }).catch(() => {});
       },
       logoutCustomer: () => setCustomer(null),
-      loginAdmin: async ({ username, password }) => {
-        // Prefer backend cookie session so admin panel works consistently across devices.
-        try {
-          const res = await fetch(`${API_BASE}/api/admin/login`, {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ username: username.trim(), password }),
-          });
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok || !data?.ok) return { ok: false, message: data?.error || "Invalid admin credentials." };
-          setAdmin({ username: data.username || username.trim(), loggedInAt: new Date().toISOString() });
-          return { ok: true };
-        } catch {
-          // Dev/offline fallback (keeps local admin working if API is down)
-          const ok = username === ADMIN_USER && password === ADMIN_PASS;
-          if (!ok) return { ok: false, message: "Invalid admin credentials." };
-          setAdmin({ username, loggedInAt: new Date().toISOString() });
-          return { ok: true };
-        }
+      loginAdmin: ({ username, password }) => {
+        const ok = username === ADMIN_USER && password === ADMIN_PASS;
+        if (!ok) return { ok: false, message: "Invalid admin credentials." };
+        setAdmin({ username, loggedInAt: new Date().toISOString() });
+        return { ok: true };
       },
-      logoutAdmin: async () => {
+      logoutAdmin: () => {
         setAdmin(null);
-        try {
-          await fetch(`${API_BASE}/api/admin/logout`, { method: "POST", credentials: "include" });
-        } catch {
-          // ignore
-        }
+        fetch(`${API_BASE}/api/admin/logout`, { method: "POST" }).catch(() => {});
       },
     }),
     [customer, admin],
