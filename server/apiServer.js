@@ -498,7 +498,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+  // const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
   const API_URL = "https://e-commerce-three-red-13.vercel.app/api";
 
   if (req.method === "GET" && url.pathname === "/api/health") {
