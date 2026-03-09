@@ -27,8 +27,6 @@ const USERS_FILE = path.join(DATA_DIR, "users.json");
 const ORDERS_FILE = path.join(DATA_DIR, "orders.json");
 const PRODUCTS_FILE = path.join(DATA_DIR, "products.json");
 const NOTIFS_FILE = path.join(DATA_DIR, "notifications.json");
-const CARTS_FILE = path.join(DATA_DIR, "carts.json");
-const WISHLISTS_FILE = path.join(DATA_DIR, "wishlists.json");
 
 function ensureDataDir() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -325,38 +323,6 @@ function createFileStore() {
       save(NOTIFS_FILE, next);
       return true;
     },
-
-    async getCart(customerId) {
-      const existing = list(CARTS_FILE);
-      const row = existing.find((c) => c?.customerId === customerId) || null;
-      return row?.items && Array.isArray(row.items) ? row.items : [];
-    },
-    async setCart(customerId, items) {
-      const now = new Date().toISOString();
-      const existing = list(CARTS_FILE);
-      const nextItems = Array.isArray(items) ? items : [];
-      const idx = existing.findIndex((c) => c?.customerId === customerId);
-      const nextRow = { customerId, items: nextItems, updatedAt: now };
-      const next = idx >= 0 ? existing.map((c, i) => (i === idx ? nextRow : c)) : [nextRow, ...existing];
-      save(CARTS_FILE, next);
-      return nextItems;
-    },
-
-    async getWishlist(customerId) {
-      const existing = list(WISHLISTS_FILE);
-      const row = existing.find((w) => w?.customerId === customerId) || null;
-      return row?.items && Array.isArray(row.items) ? row.items : [];
-    },
-    async setWishlist(customerId, items) {
-      const now = new Date().toISOString();
-      const existing = list(WISHLISTS_FILE);
-      const nextItems = Array.isArray(items) ? items : [];
-      const idx = existing.findIndex((w) => w?.customerId === customerId);
-      const nextRow = { customerId, items: nextItems, updatedAt: now };
-      const next = idx >= 0 ? existing.map((w, i) => (i === idx ? nextRow : w)) : [nextRow, ...existing];
-      save(WISHLISTS_FILE, next);
-      return nextItems;
-    },
   };
 }
 
@@ -367,8 +333,6 @@ function createMongoStore() {
   let products = null;
   let orders = null;
   let notifications = null;
-  let carts = null;
-  let wishlists = null;
 
   async function init() {
     client = new MongoClient(MONGODB_URI, { maxPoolSize: 10 });
@@ -378,8 +342,6 @@ function createMongoStore() {
     products = db.collection("products");
     orders = db.collection("orders");
     notifications = db.collection("notifications");
-    carts = db.collection("carts");
-    wishlists = db.collection("wishlists");
 
     await Promise.allSettled([
       users.createIndex({ id: 1 }, { unique: true }),
@@ -387,8 +349,6 @@ function createMongoStore() {
       orders.createIndex({ id: 1 }, { unique: true }),
       orders.createIndex({ "customer.id": 1, createdAt: -1 }),
       notifications.createIndex({ customerId: 1, createdAt: -1 }),
-      carts.createIndex({ customerId: 1 }, { unique: true }),
-      wishlists.createIndex({ customerId: 1 }, { unique: true }),
     ]);
 
     // Seed initial products so MongoDB Compass shows product data by default.
@@ -501,34 +461,6 @@ function createMongoStore() {
       await notifications.updateMany({ customerId }, { $set: { read: true } });
       return true;
     },
-
-    async getCart(customerId) {
-      const row = await carts.findOne({ customerId }, { projection: { _id: 0 } });
-      return row?.items && Array.isArray(row.items) ? row.items : [];
-    },
-    async setCart(customerId, items) {
-      const nextItems = Array.isArray(items) ? items : [];
-      await carts.updateOne(
-        { customerId },
-        { $set: { customerId, items: nextItems, updatedAt: new Date().toISOString() } },
-        { upsert: true },
-      );
-      return nextItems;
-    },
-
-    async getWishlist(customerId) {
-      const row = await wishlists.findOne({ customerId }, { projection: { _id: 0 } });
-      return row?.items && Array.isArray(row.items) ? row.items : [];
-    },
-    async setWishlist(customerId, items) {
-      const nextItems = Array.isArray(items) ? items : [];
-      await wishlists.updateOne(
-        { customerId },
-        { $set: { customerId, items: nextItems, updatedAt: new Date().toISOString() } },
-        { upsert: true },
-      );
-      return nextItems;
-    },
   };
 }
 
@@ -558,23 +490,11 @@ function makeNotification({ customerId, title, message, orderId, type = "ORDER" 
   };
 }
 
-let initPromise = null;
-async function ensureInit() {
-  if (!initPromise) initPromise = initStore();
-  return await initPromise;
-}
-
-export async function handleApiRequest(req, res) {
+const server = http.createServer(async (req, res) => {
   setCors(req, res);
   if (req.method === "OPTIONS") {
     res.writeHead(204);
     res.end();
-    return;
-  }
-
-  const init = await ensureInit();
-  if (!init.ok && MONGODB_URI) {
-    json(res, 500, { ok: false, error: init.error || "Storage init failed." });
     return;
   }
 
@@ -857,79 +777,35 @@ export async function handleApiRequest(req, res) {
     return;
   }
 
-  // Cart (customer-scoped)
-  if (req.method === "GET" && url.pathname === "/api/cart") {
-    const customerId = String(url.searchParams.get("customerId") || "");
-    if (!customerId) return json(res, 400, { ok: false, error: "Missing customerId" });
-    const items = await store.getCart(customerId);
-    const count = items.reduce((acc, it) => acc + Number(it?.qty || 0), 0);
-    json(res, 200, { ok: true, items, count });
-    return;
-  }
-
-  if ((req.method === "PUT" || req.method === "POST") && url.pathname === "/api/cart") {
-    const body = await readBody(req);
-    if (!body) return json(res, 400, { ok: false, error: "Invalid JSON body." });
-    const customerId = String(body.customerId || "");
-    if (!customerId) return json(res, 400, { ok: false, error: "Missing customerId" });
-    const saved = await store.setCart(customerId, body.items);
-    json(res, 200, { ok: true, items: saved });
-    return;
-  }
-
-  // Wishlist (customer-scoped)
-  if (req.method === "GET" && url.pathname === "/api/wishlist") {
-    const customerId = String(url.searchParams.get("customerId") || "");
-    if (!customerId) return json(res, 400, { ok: false, error: "Missing customerId" });
-    const items = await store.getWishlist(customerId);
-    json(res, 200, { ok: true, items, count: items.length });
-    return;
-  }
-
-  if ((req.method === "PUT" || req.method === "POST") && url.pathname === "/api/wishlist") {
-    const body = await readBody(req);
-    if (!body) return json(res, 400, { ok: false, error: "Invalid JSON body." });
-    const customerId = String(body.customerId || "");
-    if (!customerId) return json(res, 400, { ok: false, error: "Missing customerId" });
-    const saved = await store.setWishlist(customerId, body.items);
-    json(res, 200, { ok: true, items: saved });
-    return;
-  }
-
   json(res, 404, { ok: false, error: "Not found" });
-}
-
-const server = http.createServer(handleApiRequest);
+});
 
 server.on("error", (err) => {
   console.error("API server failed:", err?.message || err);
   process.exitCode = 1;
 });
 
-if (process.argv[1] && process.argv[1].endsWith("server/apiServer.js")) {
-  (async () => {
-    const init = await initStore();
-    if (!init.ok) {
-      if (MONGODB_URI) {
-        console.error("MongoDB init failed. Fix MONGODB_URI/MONGODB_DB and restart.");
-        process.exitCode = 1;
-        return;
-      }
+(async () => {
+  const init = await initStore();
+  if (!init.ok) {
+    // If mongo was requested but failed, surface the error clearly.
+    if (MONGODB_URI) {
+      console.error("MongoDB init failed. Fix MONGODB_URI/MONGODB_DB and restart.");
+      process.exitCode = 1;
+      return;
     }
+  }
 
-    server.listen(PORT, HOST, () => {
-      console.log(`API server running on http://${HOST}:${PORT}`);
-      console.log(`Allowed origin: ${ALLOWED_ORIGIN}`);
-      console.log(`Storage mode: ${store.mode}`);
-      if (store.mode === "mongo") console.log(`Mongo DB: ${MONGODB_DB}`);
-      else {
-        console.log(`Users file: ${USERS_FILE}`);
-        console.log(`Orders file: ${ORDERS_FILE}`);
-        console.log(`Products file: ${PRODUCTS_FILE}`);
-        console.log(`Notifications file: ${NOTIFS_FILE}`);
-        console.log(`Carts file: ${CARTS_FILE}`);
-        console.log(`Wishlists file: ${WISHLISTS_FILE}`);
-      }
-    });
-  })();
-}
+  server.listen(PORT, HOST, () => {
+    console.log(`API server running on http://${HOST}:${PORT}`);
+    console.log(`Allowed origin: ${ALLOWED_ORIGIN}`);
+    console.log(`Storage mode: ${store.mode}`);
+    if (store.mode === "mongo") console.log(`Mongo DB: ${MONGODB_DB}`);
+    else {
+      console.log(`Users file: ${USERS_FILE}`);
+      console.log(`Orders file: ${ORDERS_FILE}`);
+      console.log(`Products file: ${PRODUCTS_FILE}`);
+      console.log(`Notifications file: ${NOTIFS_FILE}`);
+    }
+  });
+})();
