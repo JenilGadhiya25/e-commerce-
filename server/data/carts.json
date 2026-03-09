@@ -1,0 +1,15 @@
+[
+  {
+    "customerId": "test@example.com",
+    "items": [
+      {
+        "key": "p1::",
+        "id": "p1",
+        "title": "Prod",
+        "price": 10,
+        "qty": 2
+      }
+    ],
+    "updatedAt": "2026-03-09T07:02:59.862Z"
+  }
+]

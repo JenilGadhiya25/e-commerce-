@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../auth/AuthContext.jsx";
 
 const WishlistContext = createContext(null);
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 
 function safeParse(json, fallback) {
   try {
@@ -30,13 +31,54 @@ export function WishlistProvider({ children }) {
   // Reload wishlist when customer changes
   useEffect(() => {
     const raw = window.localStorage.getItem(storageKey);
-    setItems(raw ? safeParse(raw, []) : []);
+    const localItems = raw ? safeParse(raw, []) : [];
+    setItems(localItems);
     setIsOpen(false);
+
+    if (!customerId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/wishlist?customerId=${encodeURIComponent(customerId)}`);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data?.ok || !Array.isArray(data.items)) return;
+        const serverItems = data.items;
+        const map = new Map();
+        for (const it of serverItems) if (it?.id) map.set(it.id, it);
+        for (const it of localItems) if (it?.id) map.set(it.id, it);
+        const merged = Array.from(map.values());
+        if (cancelled) return;
+        setItems(merged);
+        await fetch(`${API_BASE}/api/wishlist`, {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ customerId, items: merged }),
+        }).catch(() => {});
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [storageKey]);
 
   useEffect(() => {
     window.localStorage.setItem(storageKey, JSON.stringify(items));
   }, [items, storageKey]);
+
+  // Persist wishlist to backend (debounced) while logged in.
+  useEffect(() => {
+    if (!customerId) return;
+    const t = setTimeout(() => {
+      fetch(`${API_BASE}/api/wishlist`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ customerId, items }),
+      }).catch(() => {});
+    }, 450);
+    return () => clearTimeout(t);
+  }, [items, customerId]);
 
   useEffect(() => {
     if (!isOpen) return;

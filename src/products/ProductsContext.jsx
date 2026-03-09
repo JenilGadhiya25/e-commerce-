@@ -2,9 +2,8 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { bestSellersCatalog as staticProducts } from "./catalog.js";
 
 const ProductsContext = createContext(null);
-// In development we can talk to a real API server via VITE_API_BASE_URL.
-// In production (Vercel static site) we always use local storage only.
-const API_BASE = import.meta.env.DEV ? import.meta.env.VITE_API_BASE_URL || "" : "";
+// Use same-origin /api in production; allow overriding with VITE_API_BASE_URL.
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 const LOCAL_ADMIN_PRODUCTS_KEY = "ark_admin_products_v1";
 const BANNED_IMAGE_URL = "https://5.imimg.com/data5/HW/IR/MY-55237267/plastic-bags.jpg";
 
@@ -68,12 +67,11 @@ function saveLocalAdminProducts(products) {
 
 export function ProductsProvider({ children }) {
   const [apiProducts, setApiProducts] = useState(() => {
-    if (!API_BASE && typeof window !== "undefined") {
-      return loadLocalAdminProducts();
-    }
+    // Start with local cache for instant UI; we will refresh from API in the background.
+    if (typeof window !== "undefined") return loadLocalAdminProducts();
     return [];
   });
-  const [status, setStatus] = useState(() => (!API_BASE ? "ready" : "idle")); // idle | loading | ready | error
+  const [status, setStatus] = useState("idle"); // idle | loading | ready | error
   const [lastError, setLastError] = useState("");
 
   async function reload() {
@@ -86,11 +84,6 @@ export function ProductsProvider({ children }) {
       setStatus("ready");
       setLastError("");
     };
-
-    if (!API_BASE) {
-      loadLocal();
-      return;
-    }
 
     setStatus("loading");
     setLastError("");

@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 const CartContext = createContext(null);
 const PENDING_ADD_KEY = "ark_pending_cart_add_v1";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 
 function safeParse(json, fallback) {
   try {
@@ -14,24 +15,99 @@ function safeParse(json, fallback) {
   }
 }
 
+function makeStorageKey(customerId) {
+  return `ark_cart_v1::${customerId || "guest"}`;
+}
+
 function makeKey(id, options) {
   const opt = options ? JSON.stringify(options) : "";
   return `${id}::${opt}`;
 }
 
+async function apiJson(url, options) {
+  const res = await fetch(url, options);
+  const data = await res.json().catch(() => ({}));
+  return { res, data };
+}
+
+function mergeCartItems(primary, secondary) {
+  const map = new Map();
+  for (const it of primary || []) {
+    if (it?.key) map.set(it.key, it);
+  }
+  for (const it of secondary || []) {
+    if (!it?.key) continue;
+    const prev = map.get(it.key);
+    if (!prev) {
+      map.set(it.key, it);
+      continue;
+    }
+    const qty = Math.max(1, Number(prev.qty || 0) + Number(it.qty || 0));
+    map.set(it.key, { ...prev, ...it, qty });
+  }
+  return Array.from(map.values());
+}
+
 export function CartProvider({ children }) {
   const { customer } = useAuth();
+  const customerId = customer?.id || "";
+  const storageKey = useMemo(() => makeStorageKey(customerId), [customerId]);
   const navigate = useNavigate();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [items, setItems] = useState(() => {
-    const raw = typeof window !== "undefined" ? window.localStorage.getItem("ark_cart_v1") : null;
+    const raw = typeof window !== "undefined" ? window.localStorage.getItem(storageKey) : null;
     return raw ? safeParse(raw, []) : [];
   });
 
   useEffect(() => {
-    window.localStorage.setItem("ark_cart_v1", JSON.stringify(items));
-  }, [items]);
+    window.localStorage.setItem(storageKey, JSON.stringify(items));
+  }, [items, storageKey]);
+
+  // Reload cart when customer changes and sync with backend so it works across devices.
+  useEffect(() => {
+    const raw = typeof window !== "undefined" ? window.localStorage.getItem(storageKey) : null;
+    const localItems = raw ? safeParse(raw, []) : [];
+    setItems(localItems);
+    setIsOpen(false);
+
+    if (!customerId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { res, data } = await apiJson(`${API_BASE}/api/cart?customerId=${encodeURIComponent(customerId)}`);
+        if (!res.ok || !data?.ok || !Array.isArray(data.items)) return;
+        const serverItems = data.items;
+        const merged = mergeCartItems(serverItems, localItems);
+        if (cancelled) return;
+        setItems(merged);
+        // Push merged cart back so server matches this device too.
+        await apiJson(`${API_BASE}/api/cart`, {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ customerId, items: merged }),
+        }).catch(() => {});
+      } catch {
+        // ignore offline; local cart still works
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [storageKey, customerId]);
+
+  // Persist cart to backend (debounced) while logged in.
+  useEffect(() => {
+    if (!customerId) return;
+    const t = setTimeout(() => {
+      apiJson(`${API_BASE}/api/cart`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ customerId, items }),
+      }).catch(() => {});
+    }, 450);
+    return () => clearTimeout(t);
+  }, [items, customerId]);
 
   useEffect(() => {
     if (!isOpen) return;

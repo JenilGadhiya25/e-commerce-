@@ -561,11 +561,7 @@ app.get("/admin/api/payments", requireAdmin, (_req, res) => {
 });
 
 app.use(express.static(__dirname, { extensions: ["html"] }));
-fetch("/api/orders", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify(order)
-})
+
 const PORT = Number(process.env.PORT || 5173);
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
