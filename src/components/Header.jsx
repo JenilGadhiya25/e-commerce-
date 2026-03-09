@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useMemo, useRef, useState } from "react";
 import { useCart } from "../cart/CartContext.jsx";
 import { useAuth } from "../auth/AuthContext.jsx";
-import arkLogo from "../assets/ark-logo.svg";
+import arkLogo from "../assets/ark-logo.png";
 import { useWishlist } from "../wishlist/WishlistContext.jsx";
 import { useNotifications } from "../notifications/useNotifications.js";
 import { useProducts } from "../products/ProductsContext.jsx";

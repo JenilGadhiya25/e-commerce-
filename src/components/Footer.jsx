@@ -1,6 +1,6 @@
 import { IconLocation, IconMail, IconPhone, IconWhatsapp } from "./icons/Icons.jsx";
 import { Link } from "react-router-dom";
-import arkLogo from "../assets/ark-logo.svg";
+import arkLogo from "../assets/ark-logo.png";
 
 const productLinks = [
   "Home",
