@@ -6,10 +6,9 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        "src": "/(.*)", 
-        "dest": "/api/$1",
+        target: "http://127.0.0.1:5175",
+        changeOrigin: true,
       },
     },
-    port: 5175,
   },
 });
