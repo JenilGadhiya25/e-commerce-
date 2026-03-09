@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.jsx";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+// Only use VITE_API_BASE_URL in development; in production we skip API calls.
+const API_BASE = import.meta.env.DEV ? import.meta.env.VITE_API_BASE_URL || "https://e-commerce-chi-steel-31.vercel.app" : "";
 
 export default function AdminLoginPage() {
   const [params] = useSearchParams();

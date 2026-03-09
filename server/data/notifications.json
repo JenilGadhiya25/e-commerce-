@@ -3,7 +3,7 @@
     "id": "notif_7f95ea02f9dd48_1772771137763",
     "customerId": "jenilgadhiya918@gmail.com",
     "createdAt": "2026-03-06T04:25:37.763Z",
-    "read": false,
+    "read": true,
     "type": "ORDER",
     "title": "Order Confirmed",
     "message": "Your order has been confirmed by admin.",

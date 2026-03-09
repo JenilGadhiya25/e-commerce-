@@ -10,8 +10,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const root = path.resolve(__dirname, "..");
 
-const PORT = Number(process.env.API_SERVER_PORT || 5175);
-const HOST = process.env.API_SERVER_HOST || "127.0.0.1";
+// Prefer generic hosting env vars (PORT/HOST), fall back to project-specific ones, then dev defaults.
+const PORT = Number(process.env.PORT || process.env.API_SERVER_PORT || 5175);
+const HOST = process.env.HOST || process.env.API_SERVER_HOST || "0.0.0.0";
 const ALLOWED_ORIGIN = process.env.API_ALLOWED_ORIGIN || "*";
 
 const API_ADMIN_KEY = process.env.API_ADMIN_KEY || "";
