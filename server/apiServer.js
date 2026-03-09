@@ -499,6 +499,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+  const API_URL = "https://e-commerce-three-red-13.vercel.app/api";
 
   if (req.method === "GET" && url.pathname === "/api/health") {
     json(res, 200, { ok: true, storage: store.mode, db: MONGODB_URI ? MONGODB_DB : null });
