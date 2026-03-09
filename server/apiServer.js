@@ -13,7 +13,7 @@ const root = path.resolve(__dirname, "..");
 // Prefer generic hosting env vars (PORT/HOST), fall back to project-specific ones, then dev defaults.
 const PORT = Number(process.env.PORT || process.env.API_SERVER_PORT || 5175);
 const HOST = process.env.HOST || process.env.API_SERVER_HOST || "0.0.0.0";
-const ALLOWED_ORIGIN = process.env.API_ALLOWED_ORIGIN || "*";
+const ALLOWED_ORIGIN = process.env.API_ALLOWED_ORIGIN || "";
 
 const API_ADMIN_KEY = process.env.API_ADMIN_KEY || "";
 const ADMIN_USER = process.env.ADMIN_USER || "admin";
