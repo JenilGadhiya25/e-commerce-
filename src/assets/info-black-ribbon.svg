@@ -1,22 +1,134 @@
 <svg width="520" height="520" viewBox="0 0 520 520" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bBody" x1="174" y1="84" x2="360" y2="456" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#2A2A2A"/>
-      <stop offset="0.6" stop-color="#111111"/>
-      <stop offset="1" stop-color="#000000"/>
+    <linearGradient id="bagBlackBody" x1="172" y1="78" x2="362" y2="458" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3A3A3A" />
+      <stop offset="0.55" stop-color="#181818" />
+      <stop offset="1" stop-color="#000000" />
     </linearGradient>
-    <filter id="bShadow" x="104" y="56" width="312" height="428" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="18" stdDeviation="14" flood-color="#000000" flood-opacity="0.18"/>
+    <linearGradient id="bagBlackGloss" x1="212" y1="132" x2="312" y2="366" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.4" />
+      <stop offset="0.35" stop-color="#FFFFFF" stop-opacity="0.12" />
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0" />
+    </linearGradient>
+    <filter id="bagBlackShadow" x="104" y="56" width="312" height="428" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="14" flood-color="#000000" flood-opacity="0.2" />
     </filter>
   </defs>
 
-  <g filter="url(#bShadow)">
-    <path d="M188 84h144c18 0 32 14 32 32v288c0 18-14 32-32 32H188c-18 0-32-14-32-32V116c0-18 14-32 32-32Z" fill="url(#bBody)"/>
-    <path d="M216 230c10-12 26-18 44-10 18-8 34-2 44 10-10 14-26 24-44 18-18 6-34-4-44-18Z" fill="#FFFFFF" fill-opacity="0.10" stroke="#FFFFFF" stroke-opacity="0.18"/>
-    <path d="M260 222v88" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="3" stroke-linecap="round"/>
-    <path d="M260 264c18 12 34 22 44 40" stroke="#FFFFFF" stroke-opacity="0.5" stroke-width="3" stroke-linecap="round"/>
-    <path d="M260 264c-18 12-34 22-44 40" stroke="#FFFFFF" stroke-opacity="0.5" stroke-width="3" stroke-linecap="round"/>
-    <path d="M188 84h144c18 0 32 14 32 32v288c0 18-14 32-32 32H188c-18 0-32-14-32-32V116c0-18 14-32 32-32Z" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="4"/>
+  <g filter="url(#bagBlackShadow)">
+    <!-- Bag body -->
+    <path
+      d="M188 84h144c18 0 32 14 32 32v288c0 18-14 32-32 32H188c-18 0-32-14-32-32V116c0-18 14-32 32-32Z"
+      fill="url(#bagBlackBody)"
+    />
+    <!-- Top fold -->
+    <path
+      d="M156 146c36-14 72-18 108-8 36 10 72 8 108-6v30c-36 12-72 14-108 4-36-10-72-8-108 6v-26Z"
+      fill="#111111"
+      fill-opacity="0.75"
+    />
+    <!-- Gloss highlight -->
+    <path
+      d="M212 128c10-4 22-6 36-4 16 2 30 6 44 10 16 6 32 8 48 6v254c-12 2-24 0-36-4-26-8-48-18-72-24-20-6-40-4-58 6V128Z"
+      fill="url(#bagBlackGloss)"
+    />
+    <!-- Bag outline -->
+    <path
+      d="M188 84h144c18 0 32 14 32 32v288c0 18-14 32-32 32H188c-18 0-32-14-32-32V116c0-18 14-32 32-32Z"
+      stroke="#FFFFFF"
+      stroke-opacity="0.16"
+      stroke-width="4"
+    />
+
+    <!-- Center logo circle -->
+    <circle cx="260" cy="248" r="86" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-opacity="0.9" />
+    <circle cx="260" cy="248" r="82" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-opacity="0.65" />
+
+    <!-- YOUR LOGO text -->
+    <text
+      x="260"
+      y="232"
+      text-anchor="middle"
+      fill="#FFFFFF"
+      font-size="26"
+      font-family="Poppins, Arial, sans-serif"
+      font-weight="700"
+      letter-spacing="4"
+    >
+      YOUR
+    </text>
+    <text
+      x="260"
+      y="266"
+      text-anchor="middle"
+      fill="#FFFFFF"
+      font-size="26"
+      font-family="Poppins, Arial, sans-serif"
+      font-weight="700"
+      letter-spacing="4"
+    >
+      LOGO
+    </text>
+
+    <!-- Social row separator -->
+    <line
+      x1="188"
+      y1="322"
+      x2="332"
+      y2="322"
+      stroke="#FFFFFF"
+      stroke-width="1.5"
+      stroke-opacity="0.35"
+      stroke-linecap="round"
+    />
+
+    <!-- Social icons and handles -->
+    <!-- Instagram circle -->
+    <circle cx="210" cy="348" r="10" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-opacity="0.9" />
+    <rect
+      x="207"
+      y="345"
+      width="6"
+      height="6"
+      rx="1.5"
+      fill="none"
+      stroke="#FFFFFF"
+      stroke-width="1.6"
+      stroke-opacity="0.9"
+    />
+    <circle cx="214.2" cy="345.8" r="0.8" fill="#FFFFFF" fill-opacity="0.9" />
+
+    <!-- Facebook circle -->
+    <circle cx="210" cy="378" r="10" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-opacity="0.9" />
+    <path
+      d="M208.5 382.5h2v-3.6h1.8v-1.8h-1.8v-1.1c0-0.6 0.2-0.9 0.9-0.9h0.9v-1.8h-1.4c-1.7 0-2.6 0.9-2.6 2.5v1.3h-1.3v1.8h1.3v3.6Z"
+      fill="#FFFFFF"
+      fill-opacity="0.9"
+    />
+
+    <!-- Handles text -->
+    <text
+      x="236"
+      y="352"
+      fill="#FFFFFF"
+      fill-opacity="0.9"
+      font-size="14"
+      font-family="Poppins, Arial, sans-serif"
+      letter-spacing="1"
+    >
+      @YOURACCOUNT
+    </text>
+    <text
+      x="236"
+      y="380"
+      fill="#FFFFFF"
+      fill-opacity="0.9"
+      font-size="14"
+      font-family="Poppins, Arial, sans-serif"
+      letter-spacing="1"
+    >
+      WWW.YOURWEBSITE.COM
+    </text>
   </g>
 </svg>
 

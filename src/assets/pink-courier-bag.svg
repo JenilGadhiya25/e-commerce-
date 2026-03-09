@@ -21,11 +21,86 @@
     <path d="M180 112h280c22 0 40 18 40 40v30c-76 28-152 32-228 12-52-14-104-10-156 12v-54c0-22 18-40 40-40Z" fill="#FFB6D5" fill-opacity="0.28"/>
     <path d="M210 170c18-6 36-8 56-6 20 2 40 8 60 16 26 10 52 14 78 12v356c-18 2-36 0-54-6-36-12-70-28-106-36-34-8-66-6-96 8V170Z" fill="url(#bagGloss)"/>
     <path d="M180 112h280c22 0 40 18 40 40v420c0 22-18 40-40 40H180c-22 0-40-18-40-40V152c0-22 18-40 40-40Z" stroke="#D61E73" stroke-opacity="0.35" stroke-width="4"/>
-    <path d="M178 304h284" stroke="white" stroke-opacity="0.55" stroke-width="3" stroke-linecap="round"/>
-    <path d="M178 338h220" stroke="white" stroke-opacity="0.4" stroke-width="3" stroke-linecap="round"/>
-    <path d="M178 372h260" stroke="white" stroke-opacity="0.28" stroke-width="3" stroke-linecap="round"/>
   </g>
 
-  <circle cx="488" cy="174" r="10" fill="white" fill-opacity="0.42"/>
+  <!-- Center logo circle -->
+  <circle cx="320" cy="330" r="110" fill="none" stroke="white" stroke-width="6" stroke-opacity="0.9" />
+  <circle cx="320" cy="330" r="104" fill="none" stroke="white" stroke-width="2" stroke-opacity="0.7" />
+
+  <!-- YOUR LOGO text -->
+  <text
+    x="320"
+    y="312"
+    text-anchor="middle"
+    fill="white"
+    font-size="32"
+    font-family="Poppins, Arial, sans-serif"
+    font-weight="700"
+    letter-spacing="6"
+  >
+    YOUR
+  </text>
+  <text
+    x="320"
+    y="348"
+    text-anchor="middle"
+    fill="white"
+    font-size="32"
+    font-family="Poppins, Arial, sans-serif"
+    font-weight="700"
+    letter-spacing="6"
+  >
+    LOGO
+  </text>
+
+  <!-- Social row separator -->
+  <line x1="200" y1="396" x2="440" y2="396" stroke="white" stroke-width="2" stroke-opacity="0.55" stroke-linecap="round" />
+
+  <!-- Instagram icon -->
+  <circle cx="232" cy="430" r="14" fill="none" stroke="white" stroke-width="2.4" stroke-opacity="0.95" />
+  <rect
+    x="228"
+    y="426"
+    width="8"
+    height="8"
+    rx="2"
+    fill="none"
+    stroke="white"
+    stroke-width="2"
+    stroke-opacity="0.95"
+  />
+  <circle cx="237.2" cy="426.8" r="1" fill="white" fill-opacity="0.95" />
+
+  <!-- Facebook icon -->
+  <circle cx="232" cy="468" r="14" fill="none" stroke="white" stroke-width="2.4" stroke-opacity="0.95" />
+  <path
+    d="M229.5 474h3v-5.2h2.6v-2.6h-2.6v-1.7c0-0.9 0.3-1.3 1.3-1.3h1.3v-2.6h-2c-2.4 0-3.7 1.3-3.7 3.6v1.9h-1.9v2.6h1.9V474Z"
+    fill="white"
+    fill-opacity="0.95"
+  />
+
+  <!-- Handles text -->
+  <text
+    x="260"
+    y="434"
+    fill="white"
+    fill-opacity="0.95"
+    font-size="18"
+    font-family="Poppins, Arial, sans-serif"
+    letter-spacing="1.4"
+  >
+    @YOURACCOUNT
+  </text>
+  <text
+    x="260"
+    y="468"
+    fill="white"
+    fill-opacity="0.95"
+    font-size="18"
+    font-family="Poppins, Arial, sans-serif"
+    letter-spacing="1.4"
+  >
+    WWW.YOURWEBSITE.COM
+  </text>
 </svg>
 
