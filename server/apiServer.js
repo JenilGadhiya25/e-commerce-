@@ -498,8 +498,8 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
-  const API_URL = "https://e-commerce-three-red-13.vercel.app/api";
+  const url = new URL(req.url || "/", `http://${req.headers.host || "0.0.0.0:5175"}`);
+  
 
   if (req.method === "GET" && url.pathname === "/api/health") {
     json(res, 200, { ok: true, storage: store.mode, db: MONGODB_URI ? MONGODB_DB : null });
