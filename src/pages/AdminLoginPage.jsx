@@ -2,9 +2,6 @@ import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.jsx";
 
-// Only use VITE_API_BASE_URL in development; in production we skip API calls.
-const API_BASE = import.meta.env.DEV ? import.meta.env.VITE_API_BASE_URL || "https://e-commerce-chi-steel-31.vercel.app" : "";
-
 export default function AdminLoginPage() {
   const [params] = useSearchParams();
   const redirect = params.get("redirect") || "/admin";
@@ -22,41 +19,14 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setError("");
     setBusy(true);
-    const res = loginAdmin({ username: username.trim(), password });
+    const res = await loginAdmin({ username: username.trim(), password });
     if (!res.ok) {
       setBusy(false);
       setError(res.message || "Login failed.");
       return;
     }
-
-    // If no shared API base is configured (e.g. static deployment on Vercel),
-    // treat admin login as purely client-side and don't block on the backend.
-    if (!API_BASE) {
-      setBusy(false);
-      navigate(redirect);
-      return;
-    }
-
-    try {
-      const apiRes = await fetch(`${API_BASE}/api/admin/login`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ username: username.trim(), password }),
-        credentials: "include",
-      });
-      const data = await apiRes.json().catch(() => ({}));
-      if (!apiRes.ok || !data?.ok) {
-        setError(data?.error || "Admin API login failed.");
-        setBusy(false);
-        return;
-      }
-      navigate(redirect);
-    } catch {
-      // Best-effort only: if API is unreachable in production, still allow local admin session.
-      navigate(redirect);
-    } finally {
-      setBusy(false);
-    }
+    setBusy(false);
+    navigate(redirect);
   }
 
   return (
