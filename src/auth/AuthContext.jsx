@@ -95,8 +95,15 @@ export function AuthProvider({ children }) {
             credentials: "include",
             body: JSON.stringify({ username: username.trim(), password }),
           });
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok || !data?.ok) return { ok: false, message: data?.error || "Invalid admin credentials." };
+          const contentType = String(res.headers.get("content-type") || "");
+          const data = contentType.includes("application/json") ? await res.json().catch(() => ({})) : null;
+          if (!res.ok || !data?.ok) {
+            // If /api is misconfigured and returns HTML, surface a clearer message.
+            if (!data) {
+              return { ok: false, message: "Admin API is not reachable. Deploy backend (/api) and try again." };
+            }
+            return { ok: false, message: data?.error || "Invalid admin credentials." };
+          }
           setAdmin({ username: data.username || username.trim(), loggedInAt: new Date().toISOString() });
           return { ok: true };
         } catch {
