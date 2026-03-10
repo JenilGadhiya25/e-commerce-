@@ -9,7 +9,7 @@ import { defaultProducts } from "./defaultProducts.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const root = path.resolve(__dirname, "..");
-
+require("dotenv").config();
 // Prefer generic hosting env vars (PORT/HOST), fall back to project-specific ones, then dev defaults.
 const PORT = Number(process.env.PORT || process.env.API_SERVER_PORT || 5175);
 const HOST = process.env.HOST || process.env.API_SERVER_HOST || "0.0.0.0";

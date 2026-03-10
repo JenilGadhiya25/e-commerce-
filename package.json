@@ -11,6 +11,7 @@
     "payments-server": "node server.js"
   },
   "dependencies": {
+    "dotenv": "^17.3.1",
     "expres": "^0.0.5",
     "express": "^5.2.1",
     "mongodb": "^6.21.0",
