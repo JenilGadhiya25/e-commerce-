@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { listUsers } from "../users/userStore.js";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+// Only use VITE_API_BASE_URL in development; in production we skip API calls.
+const API_BASE = import.meta.env.DEV ? import.meta.env.VITE_API_BASE_URL || "" : "";
 
 function formatDate(iso) {
   try {

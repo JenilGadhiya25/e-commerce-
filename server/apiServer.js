@@ -9,7 +9,7 @@ import { defaultProducts } from "./defaultProducts.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const root = path.resolve(__dirname, "..");
-require("dotenv").config();
+
 // Prefer generic hosting env vars (PORT/HOST), fall back to project-specific ones, then dev defaults.
 const PORT = Number(process.env.PORT || process.env.API_SERVER_PORT || 5175);
 const HOST = process.env.HOST || process.env.API_SERVER_HOST || "0.0.0.0";
@@ -19,15 +19,8 @@ const API_ADMIN_KEY = process.env.API_ADMIN_KEY || "";
 const ADMIN_USER = process.env.ADMIN_USER || "admin";
 const ADMIN_PASS = process.env.ADMIN_PASS || "ark@123";
 
-// const MONGODB_URI = process.env.MONGODB_URI || "";
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = process.env.MONGODB_URI || "";
 const MONGODB_DB = process.env.MONGODB_DB || "ark_packaging";
-
-if (!MONGODB_URI) {
-  console.error("MONGODB_URI not set");
-  process.exit(1);
-}
-
 
 const DATA_DIR = path.join(root, "server", "data");
 const USERS_FILE = path.join(DATA_DIR, "users.json");
@@ -471,8 +464,7 @@ function createMongoStore() {
   };
 }
 
-// const store = MONGODB_URI ? createMongoStore() : createFileStore();
-const store = createMongoStore();
+const store = MONGODB_URI ? createMongoStore() : createFileStore();
 
 async function initStore() {
   try {
