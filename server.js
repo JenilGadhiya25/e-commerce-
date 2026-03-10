@@ -564,5 +564,5 @@ app.use(express.static(__dirname, { extensions: ["html"] }));
 
 const PORT = Number(process.env.PORT || 5173);
 app.listen(PORT, () => {
-  console.log(`Server running on https://e-commerce-three-red-13.vercel.app/:${PORT}`);
+  console.log(`Server running on https://e-commerce-three-red-13.vercel.app:${PORT}`);
 });

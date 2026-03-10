@@ -19,8 +19,15 @@ const API_ADMIN_KEY = process.env.API_ADMIN_KEY || "";
 const ADMIN_USER = process.env.ADMIN_USER || "admin";
 const ADMIN_PASS = process.env.ADMIN_PASS || "ark@123";
 
-const MONGODB_URI = process.env.MONGODB_URI || "";
+// const MONGODB_URI = process.env.MONGODB_URI || "";
+const MONGODB_URI = process.env.MONGODB_URI;
 const MONGODB_DB = process.env.MONGODB_DB || "ark_packaging";
+
+if (!MONGODB_URI) {
+  console.error("MONGODB_URI not set");
+  process.exit(1);
+}
+
 
 const DATA_DIR = path.join(root, "server", "data");
 const USERS_FILE = path.join(DATA_DIR, "users.json");
@@ -464,7 +471,8 @@ function createMongoStore() {
   };
 }
 
-const store = MONGODB_URI ? createMongoStore() : createFileStore();
+// const store = MONGODB_URI ? createMongoStore() : createFileStore();
+const store = createMongoStore();
 
 async function initStore() {
   try {
@@ -498,9 +506,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  const url = new URL(req.url || "/", `http://${req.headers.host || "0.0.0.0:5175"}`);
-
-  
+  const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
 
   if (req.method === "GET" && url.pathname === "/api/health") {
     json(res, 200, { ok: true, storage: store.mode, db: MONGODB_URI ? MONGODB_DB : null });
