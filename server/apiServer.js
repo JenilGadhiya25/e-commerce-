@@ -499,6 +499,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   const url = new URL(req.url || "/", `http://${req.headers.host || "0.0.0.0:5175"}`);
+
   
 
   if (req.method === "GET" && url.pathname === "/api/health") {
