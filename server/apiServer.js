@@ -546,8 +546,15 @@ export async function handleApiRequest(req, res) {
 
   const init = await ensureStoreReady();
   const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+  // Vercel's Node serverless routes may provide `req.url` without the `/api` prefix.
+  // Normalize so the same router works for both `/api/...` and `/...` forms.
+  const pathname = (() => {
+    const p = String(url.pathname || "/");
+    if (p === "/api" || p.startsWith("/api/")) return p;
+    return p.startsWith("/") ? `/api${p}` : `/api/${p}`;
+  })();
 
-  if (req.method === "GET" && url.pathname === "/api/health") {
+  if (req.method === "GET" && pathname === "/api/health") {
     if (!init.ok) {
       json(res, 200, { ok: false, storage: store.mode, db: MONGODB_URI ? MONGODB_DB : null, error: init.error });
       return;
@@ -562,7 +569,7 @@ export async function handleApiRequest(req, res) {
   }
 
   // Admin session (cookie-based)
-  if (req.method === "POST" && url.pathname === "/api/admin/login") {
+  if (req.method === "POST" && pathname === "/api/admin/login") {
     const body = await readBody(req);
     if (!body) return json(res, 400, { ok: false, error: "Invalid JSON body." });
     const username = String(body.username || "").trim();
@@ -577,13 +584,13 @@ export async function handleApiRequest(req, res) {
     return;
   }
 
-  if (req.method === "POST" && url.pathname === "/api/admin/logout") {
+  if (req.method === "POST" && pathname === "/api/admin/logout") {
     clearCookie(res, "ark_admin_token");
     json(res, 200, { ok: true });
     return;
   }
 
-  if (req.method === "GET" && url.pathname === "/api/admin/me") {
+  if (req.method === "GET" && pathname === "/api/admin/me") {
     const token = getCookie(req, "ark_admin_token");
     const payload = token ? verifyAdminToken(token) : null;
     if (!payload) return json(res, 401, { ok: false, error: "Unauthorized" });
@@ -595,15 +602,15 @@ export async function handleApiRequest(req, res) {
   }
 
   // Users
-  if (req.method === "GET" && url.pathname === "/api/users") {
+  if (req.method === "GET" && pathname === "/api/users") {
     if (!requireAdmin(req)) return json(res, 401, { ok: false, error: "Unauthorized" });
     const users = await store.listUsers();
     json(res, 200, { ok: true, users, count: users.length });
     return;
   }
 
-  if (req.method === "GET" && url.pathname.startsWith("/api/users/")) {
-    const id = decodeURIComponent(url.pathname.slice("/api/users/".length));
+  if (req.method === "GET" && pathname.startsWith("/api/users/")) {
+    const id = decodeURIComponent(pathname.slice("/api/users/".length));
     const user = await store.getUser(id);
     if (!user) {
       json(res, 404, { ok: false, error: "User not found" });
@@ -613,7 +620,7 @@ export async function handleApiRequest(req, res) {
     return;
   }
 
-  if (req.method === "POST" && url.pathname === "/api/users/login") {
+  if (req.method === "POST" && pathname === "/api/users/login") {
     const body = await readBody(req);
     if (!body) return json(res, 400, { ok: false, error: "Invalid JSON body." });
     const name = normalizeName(body.name);
@@ -626,13 +633,13 @@ export async function handleApiRequest(req, res) {
   }
 
   // Products
-  if (req.method === "GET" && url.pathname === "/api/products") {
+  if (req.method === "GET" && pathname === "/api/products") {
     const products = await store.listProducts();
     json(res, 200, { ok: true, products, count: products.length });
     return;
   }
 
-  if (req.method === "POST" && url.pathname === "/api/products") {
+  if (req.method === "POST" && pathname === "/api/products") {
     if (!requireAdmin(req)) return json(res, 401, { ok: false, error: "Unauthorized" });
     const body = await readBody(req);
     if (!body) return json(res, 400, { ok: false, error: "Invalid JSON body." });
@@ -649,9 +656,9 @@ export async function handleApiRequest(req, res) {
     return;
   }
 
-  if (req.method === "PUT" && url.pathname.startsWith("/api/products/")) {
+  if (req.method === "PUT" && pathname.startsWith("/api/products/")) {
     if (!requireAdmin(req)) return json(res, 401, { ok: false, error: "Unauthorized" });
-    const id = decodeURIComponent(url.pathname.slice("/api/products/".length));
+    const id = decodeURIComponent(pathname.slice("/api/products/".length));
     const body = await readBody(req);
     if (!body) return json(res, 400, { ok: false, error: "Invalid JSON body." });
     // Merge validation: require title/image/price present in body for simplicity (UI sends full payload)
@@ -663,9 +670,9 @@ export async function handleApiRequest(req, res) {
     return;
   }
 
-  if (req.method === "DELETE" && url.pathname.startsWith("/api/products/")) {
+  if (req.method === "DELETE" && pathname.startsWith("/api/products/")) {
     if (!requireAdmin(req)) return json(res, 401, { ok: false, error: "Unauthorized" });
-    const id = decodeURIComponent(url.pathname.slice("/api/products/".length));
+    const id = decodeURIComponent(pathname.slice("/api/products/".length));
     const ok = await store.deleteProduct(id);
     if (!ok) return json(res, 404, { ok: false, error: "Not found" });
     json(res, 200, { ok: true });
@@ -673,7 +680,7 @@ export async function handleApiRequest(req, res) {
   }
 
   // Orders
-  if (req.method === "GET" && url.pathname === "/api/orders") {
+  if (req.method === "GET" && pathname === "/api/orders") {
     const customerId = url.searchParams.get("customerId");
     const orders = await store.listOrders();
     const filtered = customerId ? orders.filter((o) => o?.customer?.id === customerId) : orders;
@@ -681,8 +688,8 @@ export async function handleApiRequest(req, res) {
     return;
   }
 
-  if (req.method === "GET" && url.pathname.startsWith("/api/orders/")) {
-    const rest = url.pathname.slice("/api/orders/".length);
+  if (req.method === "GET" && pathname.startsWith("/api/orders/")) {
+    const rest = pathname.slice("/api/orders/".length);
     const [id, action] = rest.split("/").filter(Boolean);
     if (!id || action) {
       // actions handled below
@@ -694,7 +701,7 @@ export async function handleApiRequest(req, res) {
     }
   }
 
-  if (req.method === "POST" && url.pathname === "/api/orders") {
+  if (req.method === "POST" && pathname === "/api/orders") {
     const body = await readBody(req);
     if (!body) return json(res, 400, { ok: false, error: "Invalid JSON body." });
     const v = validateOrderCreate(body);
@@ -719,17 +726,17 @@ export async function handleApiRequest(req, res) {
     return;
   }
 
-  if (req.method === "DELETE" && url.pathname.startsWith("/api/orders/")) {
+  if (req.method === "DELETE" && pathname.startsWith("/api/orders/")) {
     if (!requireAdmin(req)) return json(res, 401, { ok: false, error: "Unauthorized" });
-    const id = decodeURIComponent(url.pathname.slice("/api/orders/".length));
+    const id = decodeURIComponent(pathname.slice("/api/orders/".length));
     const ok = await store.deleteOrder(id);
     if (!ok) return json(res, 404, { ok: false, error: "Not found" });
     json(res, 200, { ok: true });
     return;
   }
 
-  if (req.method === "POST" && url.pathname.startsWith("/api/orders/")) {
-    const rest = url.pathname.slice("/api/orders/".length);
+  if (req.method === "POST" && pathname.startsWith("/api/orders/")) {
+    const rest = pathname.slice("/api/orders/".length);
     const [idRaw, action] = rest.split("/").filter(Boolean);
     const orderId = decodeURIComponent(String(idRaw || ""));
     if (!orderId || !action) return json(res, 404, { ok: false, error: "Not found" });
@@ -797,7 +804,7 @@ export async function handleApiRequest(req, res) {
   }
 
   // Notifications (customer-scoped)
-  if (req.method === "GET" && url.pathname === "/api/notifications") {
+  if (req.method === "GET" && pathname === "/api/notifications") {
     const customerId = String(url.searchParams.get("customerId") || "");
     if (!customerId) return json(res, 400, { ok: false, error: "Missing customerId" });
     const notifications = await store.listNotifications(customerId);
@@ -805,7 +812,7 @@ export async function handleApiRequest(req, res) {
     return;
   }
 
-  if (req.method === "POST" && url.pathname === "/api/notifications/read-all") {
+  if (req.method === "POST" && pathname === "/api/notifications/read-all") {
     const body = await readBody(req);
     if (!body) return json(res, 400, { ok: false, error: "Invalid JSON body." });
     const customerId = String(body.customerId || "");
@@ -815,8 +822,8 @@ export async function handleApiRequest(req, res) {
     return;
   }
 
-  if (req.method === "POST" && url.pathname.startsWith("/api/notifications/") && url.pathname.endsWith("/read")) {
-    const id = decodeURIComponent(url.pathname.slice("/api/notifications/".length).replace(/\/read$/, ""));
+  if (req.method === "POST" && pathname.startsWith("/api/notifications/") && pathname.endsWith("/read")) {
+    const id = decodeURIComponent(pathname.slice("/api/notifications/".length).replace(/\/read$/, ""));
     const body = await readBody(req);
     if (!body) return json(res, 400, { ok: false, error: "Invalid JSON body." });
     const customerId = String(body.customerId || "");
@@ -827,7 +834,7 @@ export async function handleApiRequest(req, res) {
     return;
   }
 
-  if (req.method === "DELETE" && url.pathname === "/api/notifications") {
+  if (req.method === "DELETE" && pathname === "/api/notifications") {
     const customerId = String(url.searchParams.get("customerId") || "");
     if (!customerId) return json(res, 400, { ok: false, error: "Missing customerId" });
     await store.deleteNotificationsByCustomer(customerId);

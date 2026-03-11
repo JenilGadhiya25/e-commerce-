@@ -77,7 +77,13 @@ export function AuthProvider({ children }) {
             credentials: "include",
             body: JSON.stringify({ username, password }),
           });
-          const data = await res.json().catch(() => ({}));
+          const raw = await res.text().catch(() => "");
+          let data = {};
+          try {
+            data = raw ? JSON.parse(raw) : {};
+          } catch {
+            data = {};
+          }
           if (!res.ok || !data?.ok) return { ok: false, message: data?.error || "Admin API login failed." };
           setAdmin({ username, loggedInAt: new Date().toISOString() });
           return { ok: true };
