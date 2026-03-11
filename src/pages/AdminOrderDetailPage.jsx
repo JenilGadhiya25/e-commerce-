@@ -19,6 +19,7 @@ export default function AdminOrderDetailPage() {
   const { orderId } = useParams();
   const [eta, setEta] = useState("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const order = useOrder(orderId);
 
   useEffect(() => {
@@ -119,7 +120,12 @@ export default function AdminOrderDetailPage() {
                 className="cartActionBtn cartActionBtn--primary"
                 type="button"
                 onClick={async () => {
-                  await setOrderEtaDays({ orderId: order.id, etaDays: eta });
+                  setError("");
+                  const updated = await setOrderEtaDays({ orderId: order.id, etaDays: eta });
+                  if (!updated) {
+                    setError("Save failed. Please login again and retry.");
+                    return;
+                  }
                   setEta("");
                 }}
               >
@@ -127,6 +133,7 @@ export default function AdminOrderDetailPage() {
               </button>
             </div>
             <div className="adminEta__hint">This will be visible to the customer on their orders page.</div>
+            {error ? <div className="authError" style={{ marginTop: 10 }}>{error}</div> : null}
           </div>
         </div>
       </div>

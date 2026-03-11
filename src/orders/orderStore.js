@@ -219,6 +219,7 @@ export async function setOrderEtaDays({ orderId, etaDays }) {
   } catch {
     // ignore
   }
+  if (STRICT_API) return null;
   return updateOrder(orderId, () => ({ etaDays: n === null ? null : Math.round(n) }));
 }
 
@@ -237,6 +238,7 @@ export async function markOrderPaid(orderId) {
   } catch {
     // ignore
   }
+  if (STRICT_API) return null;
   return updateOrder(orderId, (o) => {
     if (o.paymentStatus === "PAID") return {};
     return { paymentStatus: "PAID", paidAt: new Date().toISOString() };
@@ -274,6 +276,7 @@ export async function confirmOrderByAdminApi(orderId) {
   } catch {
     // ignore
   }
+  if (STRICT_API) return null;
   return confirmOrderByAdmin(orderId);
 }
 
@@ -287,5 +290,6 @@ export async function deleteOrderByAdminApi(orderId) {
   } catch {
     // ignore
   }
+  if (STRICT_API) return false;
   return deleteOrderByAdmin(orderId);
 }

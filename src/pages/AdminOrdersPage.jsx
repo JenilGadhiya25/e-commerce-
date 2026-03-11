@@ -30,6 +30,7 @@ export default function AdminOrdersPage() {
   const apiStatus = useOrdersApiStatus();
   const [date, setDate] = useState("");
   const dateRef = useRef(null);
+  const [actionError, setActionError] = useState("");
 
   const filteredOrders = useMemo(() => {
     const source = apiStatus?.status === "error" ? [] : orders;
@@ -49,6 +50,7 @@ export default function AdminOrdersPage() {
             {apiStatus?.status === "error" ? (
               <div className="adminUsersCount">API error: {apiStatus.error}</div>
             ) : null}
+            {actionError ? <div className="adminUsersCount">Action error: {actionError}</div> : null}
           </div>
           <div className="adminTop__actions">
             <div className="adminDateFilter" aria-label="Filter orders by date">
@@ -121,7 +123,9 @@ export default function AdminOrdersPage() {
                           type="button"
                           disabled={o.status === "CONFIRMED"}
                           onClick={async () => {
-                            await confirmOrderByAdminApi(o.id);
+                            setActionError("");
+                            const updated = await confirmOrderByAdminApi(o.id);
+                            if (!updated) setActionError("Confirm failed. Please login again and retry.");
                           }}
                         >
                           Confirm
@@ -132,7 +136,9 @@ export default function AdminOrdersPage() {
                           onClick={async () => {
                             const ok = window.confirm("Delete this order permanently?");
                             if (!ok) return;
-                            await deleteOrderByAdminApi(o.id);
+                            setActionError("");
+                            const deleted = await deleteOrderByAdminApi(o.id);
+                            if (!deleted) setActionError("Delete failed. Please login again and retry.");
                           }}
                         >
                           Delete
