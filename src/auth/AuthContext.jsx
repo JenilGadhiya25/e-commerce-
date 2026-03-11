@@ -68,8 +68,6 @@ export function AuthProvider({ children }) {
       },
       logoutCustomer: () => setCustomer(null),
       loginAdmin: async ({ username, password }) => {
-        const ok = username === ADMIN_USER && password === ADMIN_PASS;
-        if (!ok) return { ok: false, message: "Invalid admin credentials." };
         try {
           const res = await fetch(`${API_BASE}/api/admin/login`, {
             method: "POST",
@@ -84,7 +82,10 @@ export function AuthProvider({ children }) {
           } catch {
             data = {};
           }
-          if (!res.ok || !data?.ok) return { ok: false, message: data?.error || "Admin API login failed." };
+          if (!res.ok || !data?.ok) {
+            const hint = !raw || data?.error ? "" : ` (HTTP ${res.status})`;
+            return { ok: false, message: (data?.error || "Admin API login failed.") + hint };
+          }
           setAdmin({ username, loggedInAt: new Date().toISOString() });
           return { ok: true };
         } catch {

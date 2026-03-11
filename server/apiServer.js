@@ -544,7 +544,6 @@ export async function handleApiRequest(req, res) {
     return;
   }
 
-  const init = await ensureStoreReady();
   const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
   // Vercel's Node serverless routes may provide `req.url` without the `/api` prefix.
   // Normalize so the same router works for both `/api/...` and `/...` forms.
@@ -555,16 +554,23 @@ export async function handleApiRequest(req, res) {
   })();
 
   if (req.method === "GET" && pathname === "/api/health") {
+    const init = await ensureStoreReady();
     if (!init.ok) {
-      json(res, 200, { ok: false, storage: store.mode, db: MONGODB_URI ? MONGODB_DB : null, error: init.error });
+      json(res, 200, {
+        ok: false,
+        storage: store.mode,
+        db: MONGODB_URI ? MONGODB_DB : null,
+        hasMongoUri: Boolean(MONGODB_URI),
+        error: init.error,
+      });
       return;
     }
-    json(res, 200, { ok: true, storage: store.mode, db: MONGODB_URI ? MONGODB_DB : null });
-    return;
-  }
-
-  if (!init.ok) {
-    json(res, 500, { ok: false, error: init.error || "Storage init failed." });
+    json(res, 200, {
+      ok: true,
+      storage: store.mode,
+      db: MONGODB_URI ? MONGODB_DB : null,
+      hasMongoUri: Boolean(MONGODB_URI),
+    });
     return;
   }
 
@@ -598,6 +604,13 @@ export async function handleApiRequest(req, res) {
       ok: true,
       admin: { username: payload.u, createdAt: payload.iat ? new Date(payload.iat * 1000).toISOString() : null },
     });
+    return;
+  }
+
+  // Everything below depends on storage.
+  const init = await ensureStoreReady();
+  if (!init.ok) {
+    json(res, 500, { ok: false, error: init.error || "Storage init failed." });
     return;
   }
 
