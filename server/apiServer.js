@@ -1,10 +1,18 @@
 import http from "node:http";
+import dns from "node:dns";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { MongoClient } from "mongodb";
 import { createHmac, randomUUID } from "node:crypto";
 import { defaultProducts } from "./defaultProducts.js";
+
+// Helps avoid IPv6-first DNS issues in some serverless environments (Atlas connectivity).
+try {
+  dns.setDefaultResultOrder?.("ipv4first");
+} catch {
+  // ignore
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -402,7 +410,13 @@ function createMongoStore() {
   let wishlists = null;
 
   async function init() {
-    client = new MongoClient(MONGODB_URI, { maxPoolSize: 10 });
+    client = new MongoClient(MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 12000,
+      connectTimeoutMS: 12000,
+      // Be explicit about TLS in serverless environments.
+      tls: true,
+    });
     await client.connect();
     db = client.db(MONGODB_DB);
     users = db.collection("users");
