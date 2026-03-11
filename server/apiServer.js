@@ -1,14 +1,15 @@
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { MongoClient } from "mongodb";
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import { defaultProducts } from "./defaultProducts.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const root = path.resolve(__dirname, "..");
+const IS_VERCEL = Boolean(process.env.VERCEL);
 
 // Prefer generic hosting env vars (PORT/HOST), fall back to project-specific ones, then dev defaults.
 const PORT = Number(process.env.PORT || process.env.API_SERVER_PORT || 5175);
@@ -18,11 +19,13 @@ const ALLOWED_ORIGIN = process.env.API_ALLOWED_ORIGIN || "*";
 const API_ADMIN_KEY = process.env.API_ADMIN_KEY || "";
 const ADMIN_USER = process.env.ADMIN_USER || "admin";
 const ADMIN_PASS = process.env.ADMIN_PASS || "ark@123";
+const ADMIN_SESSION_SECRET = process.env.ADMIN_SESSION_SECRET || process.env.ADMIN_PASS || "dev_admin_session_secret";
 
 const MONGODB_URI = process.env.MONGODB_URI || "";
 const MONGODB_DB = process.env.MONGODB_DB || "ark_packaging";
 
-const DATA_DIR = path.join(root, "server", "data");
+// On Vercel the filesystem is read-only except `/tmp`.
+const DATA_DIR = IS_VERCEL ? path.join("/tmp", "ark_packaging_data") : path.join(root, "server", "data");
 const USERS_FILE = path.join(DATA_DIR, "users.json");
 const ORDERS_FILE = path.join(DATA_DIR, "orders.json");
 const PRODUCTS_FILE = path.join(DATA_DIR, "products.json");
@@ -91,7 +94,7 @@ function normalizeName(name) {
 function requireAdmin(req) {
   // Cookie-based admin session (preferred, doesn't expose keys in the frontend)
   const token = getCookie(req, "ark_admin_token");
-  if (token && adminSessions.has(token)) return true;
+  if (token && verifyAdminToken(token)) return true;
 
   // Optional header key (backward-compatible)
   if (API_ADMIN_KEY) {
@@ -131,14 +134,45 @@ function setCookie(res, { name, value, maxAge = 60 * 60 * 24 } = {}) {
     "HttpOnly",
     "SameSite=Lax",
   ];
+  if (IS_VERCEL) parts.push("Secure");
   res.setHeader("set-cookie", parts.join("; "));
 }
 
 function clearCookie(res, name) {
-  res.setHeader("set-cookie", `${name}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax`);
+  const parts = [`${name}=`, "Path=/", "Max-Age=0", "HttpOnly", "SameSite=Lax"];
+  if (IS_VERCEL) parts.push("Secure");
+  res.setHeader("set-cookie", parts.join("; "));
 }
 
-const adminSessions = new Map(); // token -> { username, createdAt }
+function base64UrlEncode(buf) {
+  return Buffer.from(buf).toString("base64url");
+}
+
+function base64UrlDecodeToString(input) {
+  return Buffer.from(String(input || ""), "base64url").toString("utf8");
+}
+
+function signAdminToken(payload) {
+  const body = base64UrlEncode(JSON.stringify(payload));
+  const sig = base64UrlEncode(createHmac("sha256", ADMIN_SESSION_SECRET).update(body).digest());
+  return `${body}.${sig}`;
+}
+
+function verifyAdminToken(token) {
+  const [body, sig] = String(token || "").split(".");
+  if (!body || !sig) return null;
+  const expected = base64UrlEncode(createHmac("sha256", ADMIN_SESSION_SECRET).update(body).digest());
+  if (sig !== expected) return null;
+  try {
+    const payload = JSON.parse(base64UrlDecodeToString(body));
+    const exp = Number(payload?.exp || 0);
+    if (!exp || !Number.isFinite(exp) || Date.now() / 1000 > exp) return null;
+    if (payload?.u !== ADMIN_USER) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
 
 function makeProductId(title) {
   const base = String(title || "")
@@ -467,6 +501,12 @@ function createMongoStore() {
 const store = MONGODB_URI ? createMongoStore() : createFileStore();
 
 async function initStore() {
+  if (IS_VERCEL && !MONGODB_URI) {
+    return {
+      ok: false,
+      error: "MONGODB_URI is required on Vercel for shared + permanent data. Set it in Vercel Environment Variables.",
+    };
+  }
   try {
     await store.init();
     return { ok: true };
@@ -490,7 +530,13 @@ function makeNotification({ customerId, title, message, orderId, type = "ORDER" 
   };
 }
 
-const server = http.createServer(async (req, res) => {
+let storeInitPromise = null;
+async function ensureStoreReady() {
+  if (!storeInitPromise) storeInitPromise = initStore();
+  return await storeInitPromise;
+}
+
+export async function handleApiRequest(req, res) {
   setCors(req, res);
   if (req.method === "OPTIONS") {
     res.writeHead(204);
@@ -498,10 +544,20 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  const init = await ensureStoreReady();
   const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
 
   if (req.method === "GET" && url.pathname === "/api/health") {
+    if (!init.ok) {
+      json(res, 200, { ok: false, storage: store.mode, db: MONGODB_URI ? MONGODB_DB : null, error: init.error });
+      return;
+    }
     json(res, 200, { ok: true, storage: store.mode, db: MONGODB_URI ? MONGODB_DB : null });
+    return;
+  }
+
+  if (!init.ok) {
+    json(res, 500, { ok: false, error: init.error || "Storage init failed." });
     return;
   }
 
@@ -514,16 +570,14 @@ const server = http.createServer(async (req, res) => {
     if (!username || !password) return json(res, 400, { ok: false, error: "Missing credentials." });
     if (username !== ADMIN_USER || password !== ADMIN_PASS) return json(res, 401, { ok: false, error: "Invalid credentials." });
 
-    const token = randomUUID();
-    adminSessions.set(token, { username, createdAt: new Date().toISOString() });
-    setCookie(res, { name: "ark_admin_token", value: token, maxAge: 60 * 60 * 24 * 7 }); // 7 days
+    const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7; // 7 days
+    const token = signAdminToken({ u: username, iat: Math.floor(Date.now() / 1000), exp, jti: randomUUID() });
+    setCookie(res, { name: "ark_admin_token", value: token, maxAge: 60 * 60 * 24 * 7 });
     json(res, 200, { ok: true, username });
     return;
   }
 
   if (req.method === "POST" && url.pathname === "/api/admin/logout") {
-    const token = getCookie(req, "ark_admin_token");
-    if (token) adminSessions.delete(token);
     clearCookie(res, "ark_admin_token");
     json(res, 200, { ok: true });
     return;
@@ -531,14 +585,18 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "GET" && url.pathname === "/api/admin/me") {
     const token = getCookie(req, "ark_admin_token");
-    const session = token ? adminSessions.get(token) : null;
-    if (!session) return json(res, 401, { ok: false, error: "Unauthorized" });
-    json(res, 200, { ok: true, admin: { username: session.username, createdAt: session.createdAt } });
+    const payload = token ? verifyAdminToken(token) : null;
+    if (!payload) return json(res, 401, { ok: false, error: "Unauthorized" });
+    json(res, 200, {
+      ok: true,
+      admin: { username: payload.u, createdAt: payload.iat ? new Date(payload.iat * 1000).toISOString() : null },
+    });
     return;
   }
 
   // Users
   if (req.method === "GET" && url.pathname === "/api/users") {
+    if (!requireAdmin(req)) return json(res, 401, { ok: false, error: "Unauthorized" });
     const users = await store.listUsers();
     json(res, 200, { ok: true, users, count: users.length });
     return;
@@ -778,26 +836,24 @@ const server = http.createServer(async (req, res) => {
   }
 
   json(res, 404, { ok: false, error: "Not found" });
-});
+}
 
-server.on("error", (err) => {
-  console.error("API server failed:", err?.message || err);
-  process.exitCode = 1;
-});
-
-(async () => {
-  const init = await initStore();
+export async function startApiServer({ port = PORT, host = HOST } = {}) {
+  const init = await ensureStoreReady();
   if (!init.ok) {
-    // If mongo was requested but failed, surface the error clearly.
-    if (MONGODB_URI) {
-      console.error("MongoDB init failed. Fix MONGODB_URI/MONGODB_DB and restart.");
-      process.exitCode = 1;
-      return;
-    }
+    console.error(init.error || "Storage init failed.");
+    process.exitCode = 1;
+    return;
   }
 
-  server.listen(PORT, HOST, () => {
-    console.log(`API server running on http://${HOST}:${PORT}`);
+  const server = http.createServer((req, res) => handleApiRequest(req, res));
+  server.on("error", (err) => {
+    console.error("API server failed:", err?.message || err);
+    process.exitCode = 1;
+  });
+
+  server.listen(port, host, () => {
+    console.log(`API server running on http://${host}:${port}`);
     console.log(`Allowed origin: ${ALLOWED_ORIGIN}`);
     console.log(`Storage mode: ${store.mode}`);
     if (store.mode === "mongo") console.log(`Mongo DB: ${MONGODB_DB}`);
@@ -808,4 +864,19 @@ server.on("error", (err) => {
       console.log(`Notifications file: ${NOTIFS_FILE}`);
     }
   });
+}
+
+const isMain = (() => {
+  try {
+    return import.meta.url === pathToFileURL(process.argv[1]).href;
+  } catch {
+    return false;
+  }
 })();
+
+if (isMain) {
+  startApiServer().catch((err) => {
+    console.error(err?.message || err);
+    process.exitCode = 1;
+  });
+}

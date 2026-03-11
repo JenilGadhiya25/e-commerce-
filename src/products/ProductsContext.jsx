@@ -4,6 +4,8 @@ import { bestSellersCatalog as staticProducts } from "./catalog.js";
 const ProductsContext = createContext(null);
 // Use same-origin /api in production; allow overriding with VITE_API_BASE_URL.
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+// In production we always expect a shared API (same-origin `/api`). In development, only use the API when VITE_API_BASE_URL is set.
+const USE_API = import.meta.env.PROD || Boolean(import.meta.env.VITE_API_BASE_URL);
 const LOCAL_ADMIN_PRODUCTS_KEY = "ark_admin_products_v1";
 const BANNED_IMAGE_URL = "https://5.imimg.com/data5/HW/IR/MY-55237267/plastic-bags.jpg";
 
@@ -75,8 +77,7 @@ export function ProductsProvider({ children }) {
   const [lastError, setLastError] = useState("");
 
   async function reload() {
-    // If no shared API is configured (or it is offline), fall back to local storage
-    // so that the admin panel keeps working without scary error messages.
+    // In dev (no API configured), fall back to local storage so the admin UI still works.
     const loadLocal = () => {
       if (typeof window !== "undefined") {
         setApiProducts(loadLocalAdminProducts());
@@ -85,21 +86,28 @@ export function ProductsProvider({ children }) {
       setLastError("");
     };
 
+    if (!USE_API) {
+      loadLocal();
+      return;
+    }
+
     setStatus("loading");
     setLastError("");
     try {
       const res = await fetch(`${API_BASE}/api/products`);
       const data = await res.json();
       if (res.ok && data?.ok && Array.isArray(data.products)) {
-        setApiProducts(data.products.map(normalizeApiProduct));
+        const next = data.products.map(normalizeApiProduct);
+        setApiProducts(next);
+        if (typeof window !== "undefined") saveLocalAdminProducts(next);
         setStatus("ready");
         return;
       }
-      // Bad response from server: fall back to local storage instead of showing an error.
-      loadLocal();
+      setStatus("error");
+      setLastError(data?.error || "API error while loading products.");
     } catch {
-      // Network/server failure: also fall back to local storage.
-      loadLocal();
+      setStatus("error");
+      setLastError("API server not reachable.");
     }
   }
 
@@ -128,9 +136,8 @@ export function ProductsProvider({ children }) {
           return { ok: true, product: next };
         };
 
-        // If no shared API is configured, or if it fails for any reason,
-        // we silently fall back to local storage so the admin can keep working.
-        if (!API_BASE) {
+        // In dev, if no shared API is configured, use local storage.
+        if (!USE_API) {
           return createLocal();
         }
 
@@ -138,20 +145,19 @@ export function ProductsProvider({ children }) {
           const res = await fetch(`${API_BASE}/api/products`, {
             method: "POST",
             headers: { "content-type": "application/json" },
+            credentials: "include",
             body: JSON.stringify(payload),
           });
           const data = await res.json().catch(() => ({}));
-          if (!res.ok || !data?.ok) {
-            return createLocal();
-          }
+          if (!res.ok || !data?.ok) return { ok: false, error: data?.error || "Failed to create product." };
           await reload();
           return { ok: true, product: data.product };
         } catch {
-          return createLocal();
+          return { ok: false, error: "API server not reachable. Start `npm run api-server`." };
         }
       },
       async deleteProduct(id) {
-        if (!API_BASE) {
+        if (!USE_API) {
           const updated = apiProducts.filter((p) => p.id !== id);
           setApiProducts(updated);
           if (typeof window !== "undefined") saveLocalAdminProducts(updated);
@@ -159,7 +165,7 @@ export function ProductsProvider({ children }) {
         }
 
         try {
-          const res = await fetch(`${API_BASE}/api/products/${encodeURIComponent(id)}`, { method: "DELETE" });
+          const res = await fetch(`${API_BASE}/api/products/${encodeURIComponent(id)}`, { method: "DELETE", credentials: "include" });
           const data = await res.json().catch(() => ({}));
           if (!res.ok || !data?.ok) return { ok: false, error: data?.error || "Failed to delete product." };
           await reload();
@@ -169,7 +175,7 @@ export function ProductsProvider({ children }) {
         }
       },
       async updateProduct(id, payload) {
-        if (!API_BASE) {
+        if (!USE_API) {
           const updated = apiProducts.map((p) => (p.id === id ? normalizeApiProduct({ ...p, ...payload }) : p));
           setApiProducts(updated);
           if (typeof window !== "undefined") saveLocalAdminProducts(updated);
@@ -181,6 +187,7 @@ export function ProductsProvider({ children }) {
           const res = await fetch(`${API_BASE}/api/products/${encodeURIComponent(id)}`, {
             method: "PUT",
             headers: { "content-type": "application/json" },
+            credentials: "include",
             body: JSON.stringify(payload),
           });
           const data = await res.json().catch(() => ({}));

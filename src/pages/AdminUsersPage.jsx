@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { listUsers } from "../users/userStore.js";
 
-// Only use VITE_API_BASE_URL in development; in production we skip API calls.
-const API_BASE = import.meta.env.DEV ? import.meta.env.VITE_API_BASE_URL || "" : "";
+// Use same-origin `/api` by default; allow overriding for local dev via VITE_API_BASE_URL.
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+const MIGRATE_KEY = "ark_users_migrated_to_api_v1";
 
 function formatDate(iso) {
   try {
@@ -19,11 +20,43 @@ export default function AdminUsersPage() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/users`);
+      const res = await fetch(`${API_BASE}/api/users`, { credentials: "include" });
       const data = await res.json();
+      if (res.status === 401) {
+        setUsers([]);
+        setNote("Unauthorized. Please login as admin.");
+        return;
+      }
       if (res.ok && data?.ok && Array.isArray(data.users)) {
         setUsers(data.users);
         setNote("");
+
+        // One-time best-effort migration: push any locally cached users from this device to the shared API.
+        // This fixes older data that was saved only in localStorage (mobile/laptop mismatch).
+        try {
+          if (!window.sessionStorage.getItem(MIGRATE_KEY)) {
+            window.sessionStorage.setItem(MIGRATE_KEY, "1");
+            const cached = listUsers();
+            if (cached.length) {
+              await Promise.allSettled(
+                cached.map((u) =>
+                  fetch(`${API_BASE}/api/users/login`, {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ name: u.name, email: u.email, phone: u.phone }),
+                  }),
+                ),
+              );
+              // Refresh after migration so UI shows merged list.
+              const res2 = await fetch(`${API_BASE}/api/users`, { credentials: "include" });
+              const data2 = await res2.json().catch(() => ({}));
+              if (res2.ok && data2?.ok && Array.isArray(data2.users)) setUsers(data2.users);
+            }
+          }
+        } catch {
+          // ignore
+        }
         return;
       }
       const cached = listUsers();

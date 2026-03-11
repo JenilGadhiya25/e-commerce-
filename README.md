@@ -26,4 +26,14 @@ node --env-file=.env server/apiServer.js
 
 Collections created:
 `users`, `products`, `orders`, `notifications`.
+
+## Deploy (Vercel)
+
+This project includes Vercel serverless API routes (`/api/*`). To make data **shared across devices** and **permanent**, set these environment variables in Vercel:
+
+- `MONGODB_URI` (required on Vercel)
+- `MONGODB_DB` (optional; default: `ark_packaging`)
+- `ADMIN_USER` (optional; default: `admin`)
+- `ADMIN_PASS` (optional; default: `ark@123`)
+- `ADMIN_SESSION_SECRET` (recommended; defaults to `ADMIN_PASS`)
 # e-commerce-

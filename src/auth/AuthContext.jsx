@@ -3,8 +3,8 @@ import { upsertUser } from "../users/userStore.js";
 
 const ADMIN_USER = "admin";
 const ADMIN_PASS = "ark@123";
-// Only use VITE_API_BASE_URL in development; in production we skip API calls.
-const API_BASE = import.meta.env.DEV ? import.meta.env.VITE_API_BASE_URL || "" : "";
+// Use same-origin `/api` by default; allow overriding for local dev via VITE_API_BASE_URL.
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 
 const AuthContext = createContext(null);
 
@@ -63,18 +63,31 @@ export function AuthProvider({ children }) {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ name: next.name, email: next.email, phone: next.phone }),
+          credentials: "include",
         }).catch(() => {});
       },
       logoutCustomer: () => setCustomer(null),
-      loginAdmin: ({ username, password }) => {
+      loginAdmin: async ({ username, password }) => {
         const ok = username === ADMIN_USER && password === ADMIN_PASS;
         if (!ok) return { ok: false, message: "Invalid admin credentials." };
-        setAdmin({ username, loggedInAt: new Date().toISOString() });
-        return { ok: true };
+        try {
+          const res = await fetch(`${API_BASE}/api/admin/login`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ username, password }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data?.ok) return { ok: false, message: data?.error || "Admin API login failed." };
+          setAdmin({ username, loggedInAt: new Date().toISOString() });
+          return { ok: true };
+        } catch {
+          return { ok: false, message: "API server not reachable. Start `npm run api-server`." };
+        }
       },
       logoutAdmin: () => {
         setAdmin(null);
-        fetch(`${API_BASE}/api/admin/logout`, { method: "POST" }).catch(() => {});
+        fetch(`${API_BASE}/api/admin/logout`, { method: "POST", credentials: "include" }).catch(() => {});
       },
     }),
     [customer, admin],
