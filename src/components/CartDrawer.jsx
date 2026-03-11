@@ -94,12 +94,13 @@ export default function CartDrawer() {
                         {o.etaDays} day{o.etaDays === 1 ? "" : "s"}
                       </div>
                     ) : null}
-                    {o.status === "CONFIRMED" || o.status === "PENDING" ? (
+                    {o.status === "PENDING" ? (
                       <button
                         className="cartOrder__cancel"
                         type="button"
-                        onClick={() => {
-                          cancelOrderByCustomer({ orderId: o.id, customerId: customer.id });
+                        onClick={async () => {
+                          const res = await cancelOrderByCustomer({ orderId: o.id, customerId: customer.id });
+                          if (!res?.ok) window.alert(res?.error || "Cancel failed.");
                         }}
                       >
                         Cancel Order

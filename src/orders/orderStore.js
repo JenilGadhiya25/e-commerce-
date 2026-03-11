@@ -162,17 +162,23 @@ export async function removeOrderByCustomer({ orderId, customerId }) {
     });
     if (res.ok && data?.ok && data.order) {
       updateOrder(orderId, () => data.order);
-      return data.order;
+      // Reconcile with server state (important when multiple devices are involved).
+      refreshOrders({ customerId }).catch(() => {});
+      return { ok: true, order: data.order };
     }
+    const err = data?.error || `HTTP ${res.status}`;
+    if (STRICT_API) return { ok: false, error: err };
   } catch {
     // ignore
   }
-  return updateOrder(orderId, (o) => {
+  if (STRICT_API) return { ok: false, error: "API not reachable" };
+  const local = updateOrder(orderId, (o) => {
     if (o.customer?.id !== customerId) return {};
     if (o.status === "CONFIRMED") return {};
     if (o.status === "REMOVED") return {};
     return { status: "REMOVED", removedAt: new Date().toISOString() };
   });
+  return { ok: true, order: local };
 }
 
 export async function cancelOrderByCustomer({ orderId, customerId }) {
@@ -184,18 +190,24 @@ export async function cancelOrderByCustomer({ orderId, customerId }) {
     });
     if (res.ok && data?.ok && data.order) {
       updateOrder(orderId, () => data.order);
-      return data.order;
+      // Reconcile with server state (important when multiple devices are involved).
+      refreshOrders({ customerId }).catch(() => {});
+      return { ok: true, order: data.order };
     }
+    const err = data?.error || `HTTP ${res.status}`;
+    if (STRICT_API) return { ok: false, error: err };
   } catch {
     // ignore
   }
-  return updateOrder(orderId, (o) => {
+  if (STRICT_API) return { ok: false, error: "API not reachable" };
+  const local = updateOrder(orderId, (o) => {
     if (o.customer?.id !== customerId) return {};
     if (o.status === "CONFIRMED") return {};
     if (o.status === "CANCELLED") return {};
     if (o.status === "REMOVED") return {};
     return { status: "CANCELLED", cancelledAt: new Date().toISOString() };
   });
+  return { ok: true, order: local };
 }
 
 export function listOrdersByCustomer(customerId) {
@@ -277,6 +289,8 @@ export async function confirmOrderByAdminApi(orderId) {
     });
     if (res.ok && data?.ok && data.order) {
       updateOrder(orderId, () => data.order);
+      // Reconcile with server state (important when multiple admins/devices are involved).
+      refreshOrders().catch(() => {});
       return { ok: true, order: data.order };
     }
     const err = data?.error || `HTTP ${res.status}`;

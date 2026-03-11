@@ -121,7 +121,7 @@ export default function AdminOrdersPage() {
                         <button
                           className="adminMiniBtn adminMiniBtn--confirm"
                           type="button"
-                          disabled={o.status === "CONFIRMED"}
+                          disabled={o.status !== "PENDING"}
                           onClick={async () => {
                             setActionError("");
                             const res = await confirmOrderByAdminApi(o.id);

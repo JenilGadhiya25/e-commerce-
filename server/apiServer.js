@@ -350,6 +350,19 @@ function createFileStore() {
       save(ORDERS_FILE, next);
       return nextOrder;
     },
+    async updateOrderGuarded({ id, customerId, fromStatuses }, patch) {
+      const existing = list(ORDERS_FILE);
+      const idx = existing.findIndex((o) => o?.id === id);
+      if (idx < 0) return null;
+      const current = existing[idx];
+      if (customerId && current?.customer?.id !== customerId) return null;
+      if (Array.isArray(fromStatuses) && fromStatuses.length && !fromStatuses.includes(current?.status)) return null;
+      const nextOrder = { ...current, ...patch, id };
+      const next = [...existing];
+      next[idx] = nextOrder;
+      save(ORDERS_FILE, next);
+      return nextOrder;
+    },
     async deleteOrder(id) {
       const existing = list(ORDERS_FILE);
       const next = existing.filter((o) => o?.id !== id);
@@ -548,6 +561,17 @@ function createMongoStore() {
     async updateOrder(id, patch) {
       const res = await orders.findOneAndUpdate(
         { id },
+        { $set: { ...patch, updatedAt: new Date().toISOString() } },
+        { returnDocument: "after", projection: { _id: 0 } },
+      );
+      return res.value || null;
+    },
+    async updateOrderGuarded({ id, customerId, fromStatuses }, patch) {
+      const filter = { id };
+      if (customerId) filter["customer.id"] = customerId;
+      if (Array.isArray(fromStatuses) && fromStatuses.length) filter.status = { $in: fromStatuses };
+      const res = await orders.findOneAndUpdate(
+        filter,
         { $set: { ...patch, updatedAt: new Date().toISOString() } },
         { returnDocument: "after", projection: { _id: 0 } },
       );
@@ -978,7 +1002,16 @@ export async function handleApiRequest(req, res) {
       if (!v.ok) return json(res, 403, { ok: false, error: v.error });
       if (order.status === "CONFIRMED") return json(res, 400, { ok: false, error: "Confirmed orders cannot be cancelled." });
       if (order.status === "REMOVED" || order.status === "CANCELLED") return json(res, 200, { ok: true, order });
-      const updated = await store.updateOrder(orderId, { status: "CANCELLED", cancelledAt: new Date().toISOString() });
+      const updated = await store.updateOrderGuarded(
+        { id: orderId, customerId: v.value.customerId, fromStatuses: ["PENDING"] },
+        { status: "CANCELLED", cancelledAt: new Date().toISOString() },
+      );
+      if (!updated) {
+        const fresh = await store.getOrder(orderId);
+        if (!fresh) return json(res, 404, { ok: false, error: "Order not found" });
+        if (fresh.status === "CONFIRMED") return json(res, 400, { ok: false, error: "Confirmed orders cannot be cancelled." });
+        return json(res, 200, { ok: true, order: fresh });
+      }
       json(res, 200, { ok: true, order: updated });
       return;
     }
@@ -988,7 +1021,16 @@ export async function handleApiRequest(req, res) {
       if (!v.ok) return json(res, 403, { ok: false, error: v.error });
       if (order.status === "CONFIRMED") return json(res, 400, { ok: false, error: "Confirmed orders cannot be removed." });
       if (order.status === "REMOVED") return json(res, 200, { ok: true, order });
-      const updated = await store.updateOrder(orderId, { status: "REMOVED", removedAt: new Date().toISOString() });
+      const updated = await store.updateOrderGuarded(
+        { id: orderId, customerId: v.value.customerId, fromStatuses: ["PENDING"] },
+        { status: "REMOVED", removedAt: new Date().toISOString() },
+      );
+      if (!updated) {
+        const fresh = await store.getOrder(orderId);
+        if (!fresh) return json(res, 404, { ok: false, error: "Order not found" });
+        if (fresh.status === "CONFIRMED") return json(res, 400, { ok: false, error: "Confirmed orders cannot be removed." });
+        return json(res, 200, { ok: true, order: fresh });
+      }
       json(res, 200, { ok: true, order: updated });
       return;
     }
@@ -1014,7 +1056,17 @@ export async function handleApiRequest(req, res) {
     if (action === "confirm") {
       if (!requireAdmin(req)) return json(res, 401, { ok: false, error: "Unauthorized" });
       if (order.status === "CONFIRMED") return json(res, 200, { ok: true, order });
-      const updated = await store.updateOrder(orderId, { status: "CONFIRMED", cancelledAt: null, removedAt: null });
+      if (order.status !== "PENDING") return json(res, 400, { ok: false, error: "Only pending orders can be confirmed." });
+      const updated = await store.updateOrderGuarded(
+        { id: orderId, fromStatuses: ["PENDING"] },
+        { status: "CONFIRMED", confirmedAt: new Date().toISOString(), cancelledAt: null, removedAt: null },
+      );
+      if (!updated) {
+        const fresh = await store.getOrder(orderId);
+        if (!fresh) return json(res, 404, { ok: false, error: "Order not found" });
+        if (fresh.status === "CONFIRMED") return json(res, 200, { ok: true, order: fresh });
+        return json(res, 400, { ok: false, error: "Only pending orders can be confirmed." });
+      }
       if (updated?.customer?.id) {
         const notif = makeNotification({
           customerId: updated.customer.id,

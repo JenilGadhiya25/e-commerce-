@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useCart } from "../cart/CartContext.jsx";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { cancelOrderByCustomer, createOrder } from "../orders/orderStore.js";
+import { useOrdersByCustomer } from "../orders/useOrders.js";
 
 function formatINR(value) {
   return value.toLocaleString("en-IN", { style: "currency", currency: "INR" });
@@ -13,12 +14,14 @@ const RAZORPAY_PAYMENT_LINK = "https://razorpay.me/@jenildineshbhaigadhiya";
 export default function CheckoutPage() {
   const cart = useCart();
   const { customer } = useAuth();
+  const myOrders = useOrdersByCustomer(customer?.id);
   const [orderId, setOrderId] = useState("");
   const [orderTotal, setOrderTotal] = useState(0);
   const [orderStatus, setOrderStatus] = useState("");
   const [cancelled, setCancelled] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [cancelError, setCancelError] = useState("");
 
   const summary = useMemo(
     () => ({
@@ -27,6 +30,11 @@ export default function CheckoutPage() {
     }),
     [cart.items, cart.subtotal],
   );
+
+  const currentOrder = useMemo(() => {
+    if (!orderId) return null;
+    return myOrders.find((o) => o?.id === orderId) || null;
+  }, [myOrders, orderId]);
 
   async function confirmOrder() {
     if (!customer) return;
@@ -60,8 +68,17 @@ export default function CheckoutPage() {
 
   async function cancelOrder() {
     if (!customer || !orderId) return;
-    const updated = await cancelOrderByCustomer({ orderId, customerId: customer.id });
-    if (updated?.status === "CANCELLED") setCancelled(true);
+    setCancelError("");
+    if (currentOrder?.status && currentOrder.status !== "PENDING") {
+      setCancelError("This order can no longer be cancelled.");
+      return;
+    }
+    const res = await cancelOrderByCustomer({ orderId, customerId: customer.id });
+    if (!res?.ok) {
+      setCancelError(res?.error || "Cancel failed.");
+      return;
+    }
+    if (res.order?.status === "CANCELLED") setCancelled(true);
   }
 
   return (
@@ -85,12 +102,12 @@ export default function CheckoutPage() {
             {orderStatus ? (
               <div className="checkoutSuccess__meta" aria-label="Order status">
                 <span>Status</span>
-                <strong>{orderStatus}</strong>
+                <strong>{currentOrder?.status || orderStatus}</strong>
               </div>
             ) : null}
             <div className="checkoutSuccess__meta" aria-label="Order total">
               <span>Total Amount</span>
-              <strong>{formatINR(orderTotal)}</strong>
+              <strong>{formatINR(currentOrder?.subtotal ?? orderTotal)}</strong>
             </div>
             <div className="checkoutSuccess__actions">
               <Link className="cartActionBtn cartActionBtn--primary" to="/">
@@ -99,10 +116,16 @@ export default function CheckoutPage() {
               <a className="cartActionBtn" href={RAZORPAY_PAYMENT_LINK} target="_blank" rel="noreferrer">
                 Open Payment Again
               </a>
-              <button className="cartActionBtn" type="button" onClick={cancelOrder} disabled={cancelled}>
-                {cancelled ? "Order Cancelled" : "Cancel Order"}
+              <button
+                className="cartActionBtn"
+                type="button"
+                onClick={cancelOrder}
+                disabled={cancelled || (currentOrder?.status ? currentOrder.status !== "PENDING" : false)}
+              >
+                {cancelled ? "Order Cancelled" : currentOrder?.status && currentOrder.status !== "PENDING" ? "Cannot Cancel" : "Cancel Order"}
               </button>
             </div>
+            {cancelError ? <div className="authError">{cancelError}</div> : null}
             {cancelled ? (
               <p className="checkoutNote">This order is marked as cancelled and will appear in the admin panel.</p>
             ) : null}
