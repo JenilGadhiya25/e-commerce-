@@ -2,8 +2,9 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { bestSellersCatalog as staticProducts } from "./catalog.js";
 
 const ProductsContext = createContext(null);
-// Use same-origin /api in production; allow overriding with VITE_API_BASE_URL.
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+// In production always use same-origin `/api` so we don't accidentally hit a preview URL.
+// In development you may point to a local API via VITE_API_BASE_URL.
+const API_BASE = import.meta.env.DEV ? import.meta.env.VITE_API_BASE_URL || "" : "";
 // In production we always expect a shared API (same-origin `/api`). In development, only use the API when VITE_API_BASE_URL is set.
 const USE_API = import.meta.env.PROD || Boolean(import.meta.env.VITE_API_BASE_URL);
 const LOCAL_ADMIN_PRODUCTS_KEY = "ark_admin_products_v1";

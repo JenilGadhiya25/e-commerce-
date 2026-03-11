@@ -3,8 +3,9 @@ import { upsertUser } from "../users/userStore.js";
 
 const ADMIN_USER = "admin";
 const ADMIN_PASS = "ark@123";
-// Use same-origin `/api` by default; allow overriding for local dev via VITE_API_BASE_URL.
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+// In production always use same-origin `/api` so we don't accidentally hit a preview URL.
+// In development you may point to a local API via VITE_API_BASE_URL.
+const API_BASE = import.meta.env.DEV ? import.meta.env.VITE_API_BASE_URL || "" : "";
 
 const AuthContext = createContext(null);
 

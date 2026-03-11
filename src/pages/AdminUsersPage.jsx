@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { listUsers } from "../users/userStore.js";
 
-// Use same-origin `/api` by default; allow overriding for local dev via VITE_API_BASE_URL.
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+// In production always use same-origin `/api` so we don't accidentally hit a preview URL.
+const API_BASE = import.meta.env.DEV ? import.meta.env.VITE_API_BASE_URL || "" : "";
 const MIGRATE_KEY = "ark_users_migrated_to_api_v1";
 
 function formatDate(iso) {

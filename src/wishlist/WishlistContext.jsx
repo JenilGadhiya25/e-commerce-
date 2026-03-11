@@ -2,7 +2,8 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../auth/AuthContext.jsx";
 
 const WishlistContext = createContext(null);
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+// In production always use same-origin `/api` so we don't accidentally hit a preview URL.
+const API_BASE = import.meta.env.DEV ? import.meta.env.VITE_API_BASE_URL || "" : "";
 
 function safeParse(json, fallback) {
   try {
@@ -150,4 +151,3 @@ export function useWishlist() {
   if (!ctx) throw new Error("useWishlist must be used within WishlistProvider");
   return ctx;
 }
-

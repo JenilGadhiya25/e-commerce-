@@ -4,7 +4,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 const CartContext = createContext(null);
 const PENDING_ADD_KEY = "ark_pending_cart_add_v1";
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+// In production always use same-origin `/api` so we don't accidentally hit a preview URL.
+const API_BASE = import.meta.env.DEV ? import.meta.env.VITE_API_BASE_URL || "" : "";
 
 function safeParse(json, fallback) {
   try {
