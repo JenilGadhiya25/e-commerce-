@@ -545,13 +545,23 @@ export async function handleApiRequest(req, res) {
   }
 
   const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
-  // Vercel's Node serverless routes may provide `req.url` without the `/api` prefix.
-  // Normalize so the same router works for both `/api/...` and `/...` forms.
-  const pathname = (() => {
-    const p = String(url.pathname || "/");
-    if (p === "/api" || p.startsWith("/api/")) return p;
-    return p.startsWith("/") ? `/api${p}` : `/api/${p}`;
-  })();
+  function normalizePathname(input) {
+    let p = String(input || "/").trim();
+    if (!p.startsWith("/")) p = `/${p}`;
+    // Collapse duplicate slashes.
+    p = p.replace(/\/{2,}/g, "/");
+    // Strip trailing slash (except root).
+    if (p.length > 1 && p.endsWith("/")) p = p.slice(0, -1);
+    // Vercel's Node serverless routes may provide `req.url` without the `/api` prefix.
+    if (p === "/api" || p.startsWith("/api/")) {
+      // Guard against double-prefix like /api/api/...
+      p = p.replace(/^\/api\/api(\/|$)/, "/api$1");
+      return p;
+    }
+    return `/api${p}`;
+  }
+
+  const pathname = normalizePathname(url.pathname);
 
   if (req.method === "GET" && pathname === "/api/health") {
     const init = await ensureStoreReady();
