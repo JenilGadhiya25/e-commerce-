@@ -120,8 +120,11 @@ export default function CartPage() {
                     <button
                       className="cartActionBtn"
                       type="button"
-                      onClick={() => {
-                        cancelOrderByCustomer({ orderId: o.id, customerId: customer.id });
+                      onClick={async () => {
+                        const res = await cancelOrderByCustomer({ orderId: o.id, customerId: customer.id });
+                        if (!res?.ok) {
+                          window.alert(res?.error || "Cancel failed.");
+                        }
                       }}
                     >
                       Cancel Order
