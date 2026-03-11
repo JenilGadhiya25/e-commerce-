@@ -976,6 +976,7 @@ export async function handleApiRequest(req, res) {
     if (action === "cancel") {
       const v = validateCustomerAction(body, order);
       if (!v.ok) return json(res, 403, { ok: false, error: v.error });
+      if (order.status === "CONFIRMED") return json(res, 400, { ok: false, error: "Confirmed orders cannot be cancelled." });
       if (order.status === "REMOVED" || order.status === "CANCELLED") return json(res, 200, { ok: true, order });
       const updated = await store.updateOrder(orderId, { status: "CANCELLED", cancelledAt: new Date().toISOString() });
       json(res, 200, { ok: true, order: updated });
@@ -985,6 +986,7 @@ export async function handleApiRequest(req, res) {
     if (action === "remove") {
       const v = validateCustomerAction(body, order);
       if (!v.ok) return json(res, 403, { ok: false, error: v.error });
+      if (order.status === "CONFIRMED") return json(res, 400, { ok: false, error: "Confirmed orders cannot be removed." });
       if (order.status === "REMOVED") return json(res, 200, { ok: true, order });
       const updated = await store.updateOrder(orderId, { status: "REMOVED", removedAt: new Date().toISOString() });
       json(res, 200, { ok: true, order: updated });

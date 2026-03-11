@@ -116,7 +116,7 @@ export default function CartPage() {
                     ))}
                     {o.items?.length > 2 ? <div className="orderCard__muted">+ {o.items.length - 2} more</div> : null}
                   </div>
-                  {o.status === "CONFIRMED" || o.status === "PENDING" ? (
+                  {o.status === "PENDING" ? (
                     <button
                       className="cartActionBtn"
                       type="button"

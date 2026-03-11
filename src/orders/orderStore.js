@@ -169,6 +169,7 @@ export async function removeOrderByCustomer({ orderId, customerId }) {
   }
   return updateOrder(orderId, (o) => {
     if (o.customer?.id !== customerId) return {};
+    if (o.status === "CONFIRMED") return {};
     if (o.status === "REMOVED") return {};
     return { status: "REMOVED", removedAt: new Date().toISOString() };
   });
@@ -190,6 +191,7 @@ export async function cancelOrderByCustomer({ orderId, customerId }) {
   }
   return updateOrder(orderId, (o) => {
     if (o.customer?.id !== customerId) return {};
+    if (o.status === "CONFIRMED") return {};
     if (o.status === "CANCELLED") return {};
     if (o.status === "REMOVED") return {};
     return { status: "CANCELLED", cancelledAt: new Date().toISOString() };
