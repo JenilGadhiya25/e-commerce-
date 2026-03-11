@@ -63,8 +63,17 @@ export function AuthProvider({ children }) {
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ name: next.name, email: next.email, phone: next.phone }),
           });
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok || !data?.ok) return { ok: false, message: data?.error || "Login failed. Please try again." };
+          const raw = await res.text().catch(() => "");
+          let data = {};
+          try {
+            data = raw ? JSON.parse(raw) : {};
+          } catch {
+            data = {};
+          }
+          if (!res.ok || !data?.ok) {
+            const msg = data?.error ? String(data.error) : `Login failed (HTTP ${res.status}).`;
+            return { ok: false, message: msg };
+          }
         } catch {
           return { ok: false, message: "Server not reachable. Please try again." };
         }
