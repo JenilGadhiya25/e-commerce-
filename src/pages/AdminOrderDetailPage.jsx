@@ -121,9 +121,9 @@ export default function AdminOrderDetailPage() {
                 type="button"
                 onClick={async () => {
                   setError("");
-                  const updated = await setOrderEtaDays({ orderId: order.id, etaDays: eta });
-                  if (!updated) {
-                    setError("Save failed. Please login again and retry.");
+                  const res = await setOrderEtaDays({ orderId: order.id, etaDays: eta });
+                  if (!res?.ok) {
+                    setError(res?.error || "Save failed.");
                     return;
                   }
                   setEta("");

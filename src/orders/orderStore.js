@@ -214,13 +214,16 @@ export async function setOrderEtaDays({ orderId, etaDays }) {
     });
     if (res.ok && data?.ok && data.order) {
       updateOrder(orderId, () => data.order);
-      return data.order;
+      return { ok: true, order: data.order };
     }
+    const err = data?.error || `HTTP ${res.status}`;
+    return { ok: false, error: err };
   } catch {
     // ignore
   }
-  if (STRICT_API) return null;
-  return updateOrder(orderId, () => ({ etaDays: n === null ? null : Math.round(n) }));
+  if (STRICT_API) return { ok: false, error: "API not reachable" };
+  const local = updateOrder(orderId, () => ({ etaDays: n === null ? null : Math.round(n) }));
+  return { ok: true, order: local };
 }
 
 export async function markOrderPaid(orderId) {
@@ -233,16 +236,19 @@ export async function markOrderPaid(orderId) {
     });
     if (res.ok && data?.ok && data.order) {
       updateOrder(orderId, () => data.order);
-      return data.order;
+      return { ok: true, order: data.order };
     }
+    const err = data?.error || `HTTP ${res.status}`;
+    return { ok: false, error: err };
   } catch {
     // ignore
   }
-  if (STRICT_API) return null;
-  return updateOrder(orderId, (o) => {
+  if (STRICT_API) return { ok: false, error: "API not reachable" };
+  const local = updateOrder(orderId, (o) => {
     if (o.paymentStatus === "PAID") return {};
     return { paymentStatus: "PAID", paidAt: new Date().toISOString() };
   });
+  return { ok: true, order: local };
 }
 
 export function confirmOrderByAdmin(orderId) {
@@ -271,13 +277,16 @@ export async function confirmOrderByAdminApi(orderId) {
     });
     if (res.ok && data?.ok && data.order) {
       updateOrder(orderId, () => data.order);
-      return data.order;
+      return { ok: true, order: data.order };
     }
+    const err = data?.error || `HTTP ${res.status}`;
+    return { ok: false, error: err };
   } catch {
     // ignore
   }
-  if (STRICT_API) return null;
-  return confirmOrderByAdmin(orderId);
+  if (STRICT_API) return { ok: false, error: "API not reachable" };
+  const local = confirmOrderByAdmin(orderId);
+  return { ok: true, order: local };
 }
 
 export async function deleteOrderByAdminApi(orderId) {
@@ -285,11 +294,13 @@ export async function deleteOrderByAdminApi(orderId) {
     const { res, data } = await apiJson(`/api/orders/${encodeURIComponent(orderId)}`, { method: "DELETE", credentials: "include" });
     if (res.ok && data?.ok) {
       deleteOrderByAdmin(orderId);
-      return true;
+      return { ok: true };
     }
+    const err = data?.error || `HTTP ${res.status}`;
+    return { ok: false, error: err };
   } catch {
     // ignore
   }
-  if (STRICT_API) return false;
-  return deleteOrderByAdmin(orderId);
+  if (STRICT_API) return { ok: false, error: "API not reachable" };
+  return { ok: deleteOrderByAdmin(orderId), error: "Local delete only" };
 }

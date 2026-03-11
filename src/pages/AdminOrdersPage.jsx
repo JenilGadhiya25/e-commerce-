@@ -124,8 +124,8 @@ export default function AdminOrdersPage() {
                           disabled={o.status === "CONFIRMED"}
                           onClick={async () => {
                             setActionError("");
-                            const updated = await confirmOrderByAdminApi(o.id);
-                            if (!updated) setActionError("Confirm failed. Please login again and retry.");
+                            const res = await confirmOrderByAdminApi(o.id);
+                            if (!res?.ok) setActionError(res?.error || "Confirm failed.");
                           }}
                         >
                           Confirm
@@ -137,8 +137,8 @@ export default function AdminOrdersPage() {
                             const ok = window.confirm("Delete this order permanently?");
                             if (!ok) return;
                             setActionError("");
-                            const deleted = await deleteOrderByAdminApi(o.id);
-                            if (!deleted) setActionError("Delete failed. Please login again and retry.");
+                            const res = await deleteOrderByAdminApi(o.id);
+                            if (!res?.ok) setActionError(res?.error || "Delete failed.");
                           }}
                         >
                           Delete
