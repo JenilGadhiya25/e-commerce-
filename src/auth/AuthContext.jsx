@@ -47,7 +47,7 @@ export function AuthProvider({ children }) {
     () => ({
       customer,
       admin,
-      loginCustomer: ({ name, email, phone }) => {
+      loginCustomer: async ({ name, email, phone }) => {
         const normalizedEmail = email.trim().toLowerCase();
         const next = {
           id: normalizedEmail,
@@ -56,15 +56,22 @@ export function AuthProvider({ children }) {
           phone: phone.trim(),
           createdAt: new Date().toISOString(),
         };
+        // Persist to shared API first so users are consistent across devices.
+        try {
+          const res = await fetch(`${API_BASE}/api/users/login`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ name: next.name, email: next.email, phone: next.phone }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data?.ok) return { ok: false, message: data?.error || "Login failed. Please try again." };
+        } catch {
+          return { ok: false, message: "Server not reachable. Please try again." };
+        }
+
         setCustomer(next);
         upsertUser(next);
-        // Best-effort: send login to shared API so admin can see all users across devices.
-        fetch(`${API_BASE}/api/users/login`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ name: next.name, email: next.email, phone: next.phone }),
-          credentials: "include",
-        }).catch(() => {});
+        return { ok: true, customer: next };
       },
       logoutCustomer: () => setCustomer(null),
       loginAdmin: async ({ username, password }) => {

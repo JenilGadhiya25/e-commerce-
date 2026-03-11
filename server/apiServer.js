@@ -357,6 +357,37 @@ function createFileStore() {
       save(NOTIFS_FILE, next);
       return true;
     },
+
+    async importData({ users: nextUsers = [], products: nextProducts = [], orders: nextOrders = [] } = {}) {
+      const existingUsers = list(USERS_FILE);
+      const existingProducts = list(PRODUCTS_FILE);
+      const existingOrders = list(ORDERS_FILE);
+
+      const merge = (existing, incoming) => {
+        const map = new Map();
+        for (const d of existing) if (d?.id) map.set(d.id, d);
+        for (const d of incoming) if (d?.id && !map.has(d.id)) map.set(d.id, d);
+        return Array.from(map.values());
+      };
+
+      const u = Array.isArray(nextUsers) ? nextUsers : [];
+      const p = Array.isArray(nextProducts) ? nextProducts : [];
+      const o = Array.isArray(nextOrders) ? nextOrders : [];
+
+      const mergedUsers = merge(existingUsers, u);
+      const mergedProducts = merge(existingProducts, p);
+      const mergedOrders = merge(existingOrders, o);
+
+      save(USERS_FILE, mergedUsers);
+      save(PRODUCTS_FILE, mergedProducts);
+      save(ORDERS_FILE, mergedOrders);
+
+      return {
+        usersImported: Math.max(0, mergedUsers.length - existingUsers.length),
+        productsImported: Math.max(0, mergedProducts.length - existingProducts.length),
+        ordersImported: Math.max(0, mergedOrders.length - existingOrders.length),
+      };
+    },
   };
 }
 
@@ -367,6 +398,8 @@ function createMongoStore() {
   let products = null;
   let orders = null;
   let notifications = null;
+  let carts = null;
+  let wishlists = null;
 
   async function init() {
     client = new MongoClient(MONGODB_URI, { maxPoolSize: 10 });
@@ -376,6 +409,8 @@ function createMongoStore() {
     products = db.collection("products");
     orders = db.collection("orders");
     notifications = db.collection("notifications");
+    carts = db.collection("carts");
+    wishlists = db.collection("wishlists");
 
     await Promise.allSettled([
       users.createIndex({ id: 1 }, { unique: true }),
@@ -383,6 +418,8 @@ function createMongoStore() {
       orders.createIndex({ id: 1 }, { unique: true }),
       orders.createIndex({ "customer.id": 1, createdAt: -1 }),
       notifications.createIndex({ customerId: 1, createdAt: -1 }),
+      carts.createIndex({ customerId: 1 }, { unique: true }),
+      wishlists.createIndex({ customerId: 1 }, { unique: true }),
     ]);
 
     // Seed initial products so MongoDB Compass shows product data by default.
@@ -495,6 +532,30 @@ function createMongoStore() {
       await notifications.updateMany({ customerId }, { $set: { read: true } });
       return true;
     },
+
+    async importData({ users: nextUsers = [], products: nextProducts = [], orders: nextOrders = [] } = {}) {
+      const toArr = (v) => (Array.isArray(v) ? v.filter((d) => d && typeof d === "object" && d.id) : []);
+      const u = toArr(nextUsers);
+      const p = toArr(nextProducts);
+      const o = toArr(nextOrders);
+
+      const bulkUpsert = async (col, docs) => {
+        if (!docs.length) return 0;
+        const ops = docs.map((doc) => ({
+          updateOne: { filter: { id: doc.id }, update: { $setOnInsert: doc }, upsert: true },
+        }));
+        const res = await col.bulkWrite(ops, { ordered: false }).catch(() => null);
+        return res?.upsertedCount || 0;
+      };
+
+      const [usersImported, productsImported, ordersImported] = await Promise.all([
+        bulkUpsert(users, u),
+        bulkUpsert(products, p),
+        bulkUpsert(orders, o),
+      ]);
+
+      return { usersImported, productsImported, ordersImported };
+    },
   };
 }
 
@@ -565,12 +626,32 @@ export async function handleApiRequest(req, res) {
 
   if (req.method === "GET" && pathname === "/api/health") {
     const init = await ensureStoreReady();
+    const mongoHost = (() => {
+      try {
+        const uri = String(MONGODB_URI || "");
+        if (!uri) return null;
+        if (uri.startsWith("mongodb+srv://")) {
+          const afterAt = uri.split("@")[1] || "";
+          return afterAt.split("/")[0] || null;
+        }
+        const afterProto = uri.replace(/^mongodb:\/\//, "");
+        const hostPart = afterProto.split("/")[0] || "";
+        const withoutCreds = hostPart.includes("@") ? hostPart.split("@")[1] : hostPart;
+        return withoutCreds || null;
+      } catch {
+        return null;
+      }
+    })();
     if (!init.ok) {
       json(res, 200, {
         ok: false,
         storage: store.mode,
         db: MONGODB_URI ? MONGODB_DB : null,
         hasMongoUri: Boolean(MONGODB_URI),
+        mongoHost,
+        vercel: IS_VERCEL
+          ? { env: process.env.VERCEL_ENV || null, region: process.env.VERCEL_REGION || null, url: process.env.VERCEL_URL || null }
+          : null,
         error: init.error,
       });
       return;
@@ -580,6 +661,10 @@ export async function handleApiRequest(req, res) {
       storage: store.mode,
       db: MONGODB_URI ? MONGODB_DB : null,
       hasMongoUri: Boolean(MONGODB_URI),
+      mongoHost,
+      vercel: IS_VERCEL
+        ? { env: process.env.VERCEL_ENV || null, region: process.env.VERCEL_REGION || null, url: process.env.VERCEL_URL || null }
+        : null,
     });
     return;
   }
@@ -614,6 +699,53 @@ export async function handleApiRequest(req, res) {
       ok: true,
       admin: { username: payload.u, createdAt: payload.iat ? new Date(payload.iat * 1000).toISOString() : null },
     });
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/api/admin/import") {
+    if (!requireAdmin(req)) return json(res, 401, { ok: false, error: "Unauthorized" });
+    const body = await readBody(req);
+    if (!body) return json(res, 400, { ok: false, error: "Invalid JSON body." });
+    const users = Array.isArray(body.users) ? body.users : [];
+    const products = Array.isArray(body.products) ? body.products : [];
+    const orders = Array.isArray(body.orders) ? body.orders : [];
+
+    // Basic size limits to avoid abuse.
+    if (users.length > 2000 || products.length > 2000 || orders.length > 2000) {
+      return json(res, 400, { ok: false, error: "Too many records to import in one request." });
+    }
+
+    // Filter invalid shapes.
+    const safeUsers = users
+      .filter((u) => u && typeof u === "object")
+      .map((u) => ({
+        id: normalizeEmail(u.email || u.id),
+        name: normalizeName(u.name),
+        email: normalizeEmail(u.email || u.id),
+        phone: normalizePhone(u.phone),
+        createdAt: u.createdAt || new Date().toISOString(),
+        lastLoginAt: u.lastLoginAt || u.lastLoginAt || new Date().toISOString(),
+      }))
+      .filter((u) => u.id && u.email);
+
+    const safeProducts = products
+      .filter((p) => p && typeof p === "object" && p.id && p.title && p.image)
+      .map((p) => ({
+        ...p,
+        id: String(p.id),
+        title: String(p.title),
+        image: String(p.image),
+      }));
+
+    const safeOrders = orders
+      .filter((o) => o && typeof o === "object" && o.id && o.customer?.id && Array.isArray(o.items))
+      .map((o) => ({
+        ...o,
+        id: String(o.id),
+      }));
+
+    const result = await store.importData({ users: safeUsers, products: safeProducts, orders: safeOrders });
+    json(res, 200, { ok: true, ...result });
     return;
   }
 
@@ -705,6 +837,7 @@ export async function handleApiRequest(req, res) {
   // Orders
   if (req.method === "GET" && pathname === "/api/orders") {
     const customerId = url.searchParams.get("customerId");
+    if (!customerId && !requireAdmin(req)) return json(res, 401, { ok: false, error: "Unauthorized" });
     const orders = await store.listOrders();
     const filtered = customerId ? orders.filter((o) => o?.customer?.id === customerId) : orders;
     json(res, 200, { ok: true, orders: filtered, count: filtered.length });

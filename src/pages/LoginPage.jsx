@@ -33,14 +33,18 @@ export default function LoginPage() {
     return true;
   }, [name, email, phone]);
 
-  function onSubmit(e) {
+  async function onSubmit(e) {
     e.preventDefault();
     setError("");
     if (!canSubmit) {
       setError("Please enter your name, valid email, and phone number.");
       return;
     }
-    loginCustomer({ name, email, phone });
+    const res = await loginCustomer({ name, email, phone });
+    if (!res?.ok) {
+      setError(res?.message || "Login failed. Please try again.");
+      return;
+    }
 
     // If user was trying to add to cart before login, complete it now.
     const pending = safeParse(window.sessionStorage.getItem(PENDING_ADD_KEY), null);

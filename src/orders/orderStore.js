@@ -44,6 +44,23 @@ async function apiJson(url, options) {
   return { res, data };
 }
 
+const STRICT_API = import.meta.env.PROD;
+
+let ordersApiStatus = { status: "idle", error: "" }; // idle | loading | ready | error
+
+function setOrdersApiStatus(next) {
+  ordersApiStatus = { ...ordersApiStatus, ...next };
+  try {
+    window.dispatchEvent(new Event("ark_orders_status_changed"));
+  } catch {
+    // ignore
+  }
+}
+
+export function getOrdersApiStatus() {
+  return ordersApiStatus;
+}
+
 export function listOrders() {
   return readCache();
 }
@@ -59,11 +76,19 @@ export function getOrder(orderId) {
 export async function refreshOrders({ customerId } = {}) {
   const url = customerId ? `/api/orders?customerId=${encodeURIComponent(customerId)}` : "/api/orders";
   try {
-    const { res, data } = await apiJson(url);
-    if (!res.ok || !data?.ok || !Array.isArray(data.orders)) return { ok: false };
+    setOrdersApiStatus({ status: "loading", error: "" });
+    const { res, data } = await apiJson(url, customerId ? undefined : { credentials: "include" });
+    if (!res.ok || !data?.ok || !Array.isArray(data.orders)) {
+      const err = data?.error || `HTTP ${res.status}`;
+      setOrdersApiStatus({ status: "error", error: err });
+      return { ok: false, error: err };
+    }
     writeCache(data.orders);
+    setOrdersApiStatus({ status: "ready", error: "" });
     return { ok: true, orders: data.orders };
   } catch {
+    const err = "API not reachable";
+    setOrdersApiStatus({ status: "error", error: err });
     return { ok: false };
   }
 }
@@ -76,7 +101,9 @@ export async function createOrder({ customer, items, subtotal }) {
       body: JSON.stringify({ customer, items, subtotal }),
     });
     if (!res.ok || !data?.ok || !data.order) {
-      // fallback local
+      const err = data?.error || `HTTP ${res.status}`;
+      if (STRICT_API) return { ok: false, error: err };
+      // dev fallback local
       const order = {
         id: getId(),
         createdAt: new Date().toISOString(),
@@ -91,11 +118,12 @@ export async function createOrder({ customer, items, subtotal }) {
         subtotal,
       };
       saveOrders([order, ...listOrders()]);
-      return order;
+      return { ok: true, order };
     }
     saveOrders([data.order, ...listOrders().filter((o) => o.id !== data.order.id)]);
-    return data.order;
+    return { ok: true, order: data.order };
   } catch {
+    if (STRICT_API) return { ok: false, error: "API not reachable" };
     const order = {
       id: getId(),
       createdAt: new Date().toISOString(),
@@ -110,7 +138,7 @@ export async function createOrder({ customer, items, subtotal }) {
       subtotal,
     };
     saveOrders([order, ...listOrders()]);
-    return order;
+    return { ok: true, order };
   }
 }
 
@@ -179,6 +207,7 @@ export async function setOrderEtaDays({ orderId, etaDays }) {
     const { res, data } = await apiJson(`/api/orders/${encodeURIComponent(orderId)}/eta`, {
       method: "POST",
       headers: { "content-type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ etaDays: n }),
     });
     if (res.ok && data?.ok && data.order) {
@@ -196,6 +225,7 @@ export async function markOrderPaid(orderId) {
     const { res, data } = await apiJson(`/api/orders/${encodeURIComponent(orderId)}/paid`, {
       method: "POST",
       headers: { "content-type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({}),
     });
     if (res.ok && data?.ok && data.order) {
@@ -232,6 +262,7 @@ export async function confirmOrderByAdminApi(orderId) {
     const { res, data } = await apiJson(`/api/orders/${encodeURIComponent(orderId)}/confirm`, {
       method: "POST",
       headers: { "content-type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({}),
     });
     if (res.ok && data?.ok && data.order) {
@@ -246,7 +277,7 @@ export async function confirmOrderByAdminApi(orderId) {
 
 export async function deleteOrderByAdminApi(orderId) {
   try {
-    const { res, data } = await apiJson(`/api/orders/${encodeURIComponent(orderId)}`, { method: "DELETE" });
+    const { res, data } = await apiJson(`/api/orders/${encodeURIComponent(orderId)}`, { method: "DELETE", credentials: "include" });
     if (res.ok && data?.ok) {
       deleteOrderByAdmin(orderId);
       return true;

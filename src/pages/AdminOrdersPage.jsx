@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { confirmOrderByAdminApi, deleteOrderByAdminApi } from "../orders/orderStore.js";
-import { useOrders } from "../orders/useOrders.js";
+import { useOrders, useOrdersApiStatus } from "../orders/useOrders.js";
 import { IconCalendar } from "../components/icons/Icons.jsx";
 
 function formatINR(value) {
@@ -27,13 +27,15 @@ function localDateKey(iso) {
 
 export default function AdminOrdersPage() {
   const orders = useOrders();
+  const apiStatus = useOrdersApiStatus();
   const [date, setDate] = useState("");
   const dateRef = useRef(null);
 
   const filteredOrders = useMemo(() => {
-    if (!date) return orders;
-    return orders.filter((o) => o?.createdAt && localDateKey(o.createdAt) === date);
-  }, [date, orders]);
+    const source = apiStatus?.status === "error" ? [] : orders;
+    if (!date) return source;
+    return source.filter((o) => o?.createdAt && localDateKey(o.createdAt) === date);
+  }, [date, orders, apiStatus?.status]);
 
   return (
     <section className="adminPage" aria-label="Admin orders">
@@ -44,6 +46,9 @@ export default function AdminOrdersPage() {
             <div className="adminUsersCount">
               {filteredOrders.length} orders{date ? ` on ${date}` : ""} • {orders.length} total
             </div>
+            {apiStatus?.status === "error" ? (
+              <div className="adminUsersCount">API error: {apiStatus.error}</div>
+            ) : null}
           </div>
           <div className="adminTop__actions">
             <div className="adminDateFilter" aria-label="Filter orders by date">

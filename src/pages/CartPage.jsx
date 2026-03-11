@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useCart } from "../cart/CartContext.jsx";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { cancelOrderByCustomer } from "../orders/orderStore.js";
-import { useOrdersByCustomer } from "../orders/useOrders.js";
+import { useOrdersApiStatus, useOrdersByCustomer } from "../orders/useOrders.js";
 
 function formatINR(value) {
   return value.toLocaleString("en-IN", { style: "currency", currency: "INR" });
@@ -12,6 +12,7 @@ export default function CartPage() {
   const cart = useCart();
   const { customer } = useAuth();
   const orders = useOrdersByCustomer(customer?.id);
+  const apiStatus = useOrdersApiStatus();
 
   return (
     <section className="cartPage" aria-label="Cart page">
@@ -85,6 +86,8 @@ export default function CartPage() {
             <div className="cartPageEmpty">
               Please <Link className="inlineLink" to="/login?redirect=%2Fcart">login</Link> to view and cancel your orders.
             </div>
+          ) : apiStatus?.status === "error" ? (
+            <div className="cartPageEmpty">Unable to load orders: {apiStatus.error}</div>
           ) : orders.length === 0 ? (
             <div className="cartPageEmpty">No orders yet.</div>
           ) : (

@@ -69,7 +69,8 @@ function saveLocalAdminProducts(products) {
 
 export function ProductsProvider({ children }) {
   const [apiProducts, setApiProducts] = useState(() => {
-    // Start with local cache for instant UI; we will refresh from API in the background.
+    // In production we rely on the shared API for consistent data across devices.
+    if (import.meta.env.PROD) return [];
     if (typeof window !== "undefined") return loadLocalAdminProducts();
     return [];
   });

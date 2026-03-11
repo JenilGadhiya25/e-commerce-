@@ -18,6 +18,7 @@ export default function CheckoutPage() {
   const [orderStatus, setOrderStatus] = useState("");
   const [cancelled, setCancelled] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   const summary = useMemo(
     () => ({
@@ -31,12 +32,19 @@ export default function CheckoutPage() {
     if (!customer) return;
     if (cart.items.length === 0) return;
     if (busy) return;
+    setError("");
     setBusy(true);
-    const order = await createOrder({
+    const res = await createOrder({
       customer,
       items: cart.items,
       subtotal: cart.subtotal,
     });
+    if (!res?.ok) {
+      setBusy(false);
+      setError(res?.error || "Failed to create order. Please try again.");
+      return;
+    }
+    const order = res.order;
     setOrderId(order.id);
     setOrderTotal(order.subtotal);
     setOrderStatus(order.status);
@@ -145,6 +153,7 @@ export default function CheckoutPage() {
                 <span>Subtotal</span>
                 <strong>{formatINR(summary.subtotal)}</strong>
               </div>
+              {error ? <div className="authError">{error}</div> : null}
               <button className="cartActionBtn cartActionBtn--primary" type="button" onClick={confirmOrder} disabled={busy}>
                 {busy ? "Opening Payment..." : "Proceed to Payment"}
               </button>

@@ -15,7 +15,7 @@ function formatDate(iso) {
 }
 
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState(() => listUsers());
+  const [users, setUsers] = useState(() => (import.meta.env.PROD ? [] : listUsers()));
   const [note, setNote] = useState("");
 
   const load = useCallback(async () => {
