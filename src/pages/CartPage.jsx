@@ -37,6 +37,7 @@ export default function CartPage() {
                     {it.options ? (
                       <div className="cartPageItem__opts">
                         {Object.entries(it.options)
+                          .filter(([k]) => k !== "designUploadId" && k !== "designFilename")
                           .map(([k, v]) => `${k}: ${v}`)
                           .join(" • ")}
                       </div>

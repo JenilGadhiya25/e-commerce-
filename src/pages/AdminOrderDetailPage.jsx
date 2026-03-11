@@ -97,8 +97,15 @@ export default function AdminOrderDetailPage() {
                 {it.options ? (
                   <div className="adminOrderItem__opts">
                     {Object.entries(it.options)
+                      .filter(([k]) => k !== "designUploadId" && k !== "designFilename")
                       .map(([k, v]) => `${k}: ${v}`)
                       .join(" • ")}
+                  </div>
+                ) : null}
+                {it.options?.designUploadId ? (
+                  <div className="adminUpload" aria-label="Uploaded design">
+                    <div className="adminUpload__label">Uploaded image</div>
+                    <img className="adminUpload__img" src={`/api/uploads/${encodeURIComponent(it.options.designUploadId)}`} alt="Uploaded design" />
                   </div>
                 ) : null}
               </div>

@@ -47,6 +47,7 @@ export default function CartDrawer() {
                   {it.options ? (
                     <div className="cartItem__opts">
                       {Object.entries(it.options)
+                        .filter(([k]) => k !== "designUploadId" && k !== "designFilename")
                         .map(([k, v]) => `${k}: ${v}`)
                         .join(" • ")}
                     </div>

@@ -38,6 +38,7 @@ const USERS_FILE = path.join(DATA_DIR, "users.json");
 const ORDERS_FILE = path.join(DATA_DIR, "orders.json");
 const PRODUCTS_FILE = path.join(DATA_DIR, "products.json");
 const NOTIFS_FILE = path.join(DATA_DIR, "notifications.json");
+const UPLOADS_FILE = path.join(DATA_DIR, "uploads.json");
 
 function ensureDataDir() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -74,6 +75,18 @@ function setCors(req, res) {
 function json(res, status, body) {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(body));
+}
+
+function sendBinary(res, { status = 200, contentType = "application/octet-stream", buffer, filename } = {}) {
+  const headers = {
+    "content-type": contentType,
+    "cache-control": "private, max-age=0, must-revalidate",
+  };
+  if (filename) {
+    headers["content-disposition"] = `inline; filename="${String(filename).replace(/"/g, "")}"`;
+  }
+  res.writeHead(status, headers);
+  res.end(buffer || Buffer.from(""));
 }
 
 async function readBody(req) {
@@ -432,6 +445,15 @@ function createFileStore() {
         ordersImported: Math.max(0, mergedOrders.length - existingOrders.length),
       };
     },
+
+    async getUpload(id) {
+      return list(UPLOADS_FILE).find((u) => u?.id === id) || null;
+    },
+    async createUpload(upload) {
+      const existing = list(UPLOADS_FILE);
+      save(UPLOADS_FILE, [upload, ...existing]);
+      return upload;
+    },
   };
 }
 
@@ -444,6 +466,7 @@ function createMongoStore() {
   let notifications = null;
   let carts = null;
   let wishlists = null;
+  let uploads = null;
 
   async function init() {
     client = new MongoClient(MONGODB_URI, {
@@ -461,6 +484,7 @@ function createMongoStore() {
     notifications = db.collection("notifications");
     carts = db.collection("carts");
     wishlists = db.collection("wishlists");
+    uploads = db.collection("uploads");
 
     await Promise.allSettled([
       users.createIndex({ id: 1 }, { unique: true }),
@@ -470,6 +494,8 @@ function createMongoStore() {
       notifications.createIndex({ customerId: 1, createdAt: -1 }),
       carts.createIndex({ customerId: 1 }, { unique: true }),
       wishlists.createIndex({ customerId: 1 }, { unique: true }),
+      uploads.createIndex({ id: 1 }, { unique: true }),
+      uploads.createIndex({ customerId: 1, createdAt: -1 }),
     ]);
 
     // Seed initial products so MongoDB Compass shows product data by default.
@@ -631,6 +657,14 @@ function createMongoStore() {
       ]);
 
       return { usersImported, productsImported, ordersImported };
+    },
+
+    async getUpload(id) {
+      return await uploads.findOne({ id }, { projection: { _id: 0 } });
+    },
+    async createUpload(upload) {
+      await uploads.insertOne(upload);
+      return upload;
     },
   };
 }
@@ -1121,6 +1155,61 @@ export async function handleApiRequest(req, res) {
     if (!customerId) return json(res, 400, { ok: false, error: "Missing customerId" });
     await store.deleteNotificationsByCustomer(customerId);
     json(res, 200, { ok: true });
+    return;
+  }
+
+  // Uploads (design/logo uploads)
+  if (req.method === "POST" && pathname === "/api/uploads") {
+    const body = await readBody(req);
+    if (!body) return json(res, 400, { ok: false, error: "Invalid JSON body." });
+    const customerId = normalizeEmail(body.customerId);
+    const filename = String(body.filename || "upload").trim().slice(0, 120);
+    const contentType = String(body.contentType || "").trim() || "application/octet-stream";
+    const dataUrl = String(body.dataUrl || "").trim();
+    if (!customerId) return json(res, 400, { ok: false, error: "Missing customerId." });
+    if (!dataUrl.startsWith("data:") || !dataUrl.includes("base64,")) {
+      return json(res, 400, { ok: false, error: "Invalid dataUrl (base64 required)." });
+    }
+    const base64 = dataUrl.split("base64,")[1] || "";
+    let buf = null;
+    try {
+      buf = Buffer.from(base64, "base64");
+    } catch {
+      buf = null;
+    }
+    if (!buf || !buf.length) return json(res, 400, { ok: false, error: "Invalid file data." });
+    // Keep payload small for serverless limits.
+    const MAX_BYTES = 1_000_000; // ~1MB
+    if (buf.length > MAX_BYTES) return json(res, 413, { ok: false, error: "File too large. Max 1MB." });
+
+    const now = new Date().toISOString();
+    const upload = {
+      id: makeId("upl"),
+      customerId,
+      filename,
+      contentType,
+      size: buf.length,
+      createdAt: now,
+      dataBase64: base64,
+    };
+    await store.createUpload(upload);
+    json(res, 200, { ok: true, upload: { id: upload.id, url: `/api/uploads/${encodeURIComponent(upload.id)}`, filename } });
+    return;
+  }
+
+  if (req.method === "GET" && pathname.startsWith("/api/uploads/")) {
+    const id = decodeURIComponent(pathname.slice("/api/uploads/".length));
+    if (!id) return json(res, 404, { ok: false, error: "Not found" });
+    const upload = await store.getUpload(id);
+    if (!upload) return json(res, 404, { ok: false, error: "Not found" });
+    let buf = null;
+    try {
+      buf = Buffer.from(String(upload.dataBase64 || ""), "base64");
+    } catch {
+      buf = null;
+    }
+    if (!buf || !buf.length) return json(res, 404, { ok: false, error: "Not found" });
+    sendBinary(res, { status: 200, contentType: upload.contentType || "application/octet-stream", buffer: buf, filename: upload.filename });
     return;
   }
 

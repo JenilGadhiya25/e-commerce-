@@ -2695,6 +2695,60 @@ input {
   font-size: 13px;
 }
 
+.uploadBox--success {
+  border-color: rgba(47, 122, 75, 0.55);
+  background: rgba(47, 122, 75, 0.06);
+}
+
+.uploadBox--success .uploadBtn {
+  border-color: rgba(47, 122, 75, 0.45);
+  background: rgba(47, 122, 75, 0.08);
+  color: #1e5a36;
+}
+
+.uploadBox--error {
+  border-color: rgba(210, 66, 66, 0.55);
+  background: rgba(210, 66, 66, 0.06);
+}
+
+.uploadErr {
+  margin-top: 10px;
+  color: rgba(160, 45, 45, 0.92);
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.adminUploadThumb {
+  margin-top: 10px;
+  width: 110px;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid rgba(34, 34, 34, 0.12);
+  box-shadow: 0 12px 22px rgba(0, 0, 0, 0.06);
+}
+
+.adminUpload {
+  margin-top: 10px;
+}
+
+.adminUpload__label {
+  font-weight: 900;
+  font-size: 12px;
+  color: rgba(51, 51, 51, 0.72);
+  margin-bottom: 8px;
+}
+
+.adminUpload__img {
+  width: min(420px, 100%);
+  max-height: 320px;
+  object-fit: contain;
+  border-radius: 14px;
+  border: 1px solid rgba(34, 34, 34, 0.12);
+  background: rgba(245, 247, 249, 0.8);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.08);
+}
+
 .pdBuyRow {
   margin-top: 16px;
   display: grid;

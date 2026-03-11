@@ -4,6 +4,7 @@ import { IconCart, IconSearchPlus, IconStar, IconX } from "../components/icons/I
 import { useCart } from "../cart/CartContext.jsx";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { useProducts } from "../products/ProductsContext.jsx";
+import { uploadDesignImage } from "../uploads/uploadClient.js";
 
 const defaultSizes = ["4x4", "6x8", "8x10", "10x12", "12x16", "12x14", "14x18"];
 const defaultPackQty = ["100", "200", "300", "500", "1000"];
@@ -137,6 +138,7 @@ export default function DynamicProductDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const dialogRef = useRef(null);
+  const fileRef = useRef(null);
 
   const product = useMemo(() => {
     const id = String(productId || "");
@@ -146,6 +148,9 @@ export default function DynamicProductDetailPage() {
   const schema = useMemo(() => buildSchema(product), [product]);
   const [qty, setQty] = useState(1);
   const [activeImg, setActiveImg] = useState(0);
+  const [uploadState, setUploadState] = useState("idle"); // idle | uploading | success | error
+  const [uploadError, setUploadError] = useState("");
+  const [designUpload, setDesignUpload] = useState(null); // {id,url,filename}
 
   const [opts, setOpts] = useState(() => ({ ...(schema.defaults || {}) }));
 
@@ -165,6 +170,13 @@ export default function DynamicProductDetailPage() {
     for (const [k, v] of Object.entries(opts || {})) parts.push(`${k}:${v}`);
     return parts.join(" • ");
   }, [product, opts]);
+
+  const cartOptions = useMemo(() => {
+    const next = { ...(opts || {}) };
+    if (designUpload?.id) next.designUploadId = designUpload.id;
+    if (designUpload?.filename) next.designFilename = designUpload.filename;
+    return next;
+  }, [opts, designUpload]);
 
   function openZoom() {
     dialogRef.current?.showModal?.();
@@ -329,13 +341,74 @@ export default function DynamicProductDetailPage() {
             </div>
 
             {schema.showUpload ? (
-              <div className="uploadBox" aria-label="Upload an image">
+              <div
+                className={
+                  uploadState === "success"
+                    ? "uploadBox uploadBox--success"
+                    : uploadState === "error"
+                      ? "uploadBox uploadBox--error"
+                      : "uploadBox"
+                }
+                aria-label="Upload an image"
+              >
                 <div className="uploadLabel">Upload an image :</div>
                 <label className="uploadCtl">
-                  <input className="uploadInput" type="file" />
+                  <input
+                    ref={fileRef}
+                    className="uploadInput"
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0] || null;
+                      if (!file) return;
+                      if (!auth.customer) {
+                        navigate(`/login?redirect=${encodeURIComponent(location.pathname)}`);
+                        return;
+                      }
+                      setUploadError("");
+                      setUploadState("uploading");
+                      setDesignUpload(null);
+                      try {
+                        const res = await uploadDesignImage({ file, customerId: auth.customer.id });
+                        if (!res?.ok) {
+                          setUploadState("error");
+                          setUploadError(res?.error || "Upload failed.");
+                          return;
+                        }
+                        setDesignUpload(res.upload);
+                        setUploadState("success");
+                      } catch {
+                        setUploadState("error");
+                        setUploadError("Upload failed.");
+                      }
+                    }}
+                  />
                   <span className="uploadBtn">Choose file</span>
-                  <span className="uploadHint">No file chosen</span>
+                  <span className="uploadHint">
+                    {uploadState === "uploading"
+                      ? "Uploading..."
+                      : uploadState === "success"
+                        ? "Uploaded"
+                        : designUpload?.filename
+                          ? designUpload.filename
+                          : "No file chosen"}
+                  </span>
                 </label>
+                {uploadState === "success" && designUpload?.id ? (
+                  <button
+                    className="clearLink"
+                    type="button"
+                    onClick={() => {
+                      setDesignUpload(null);
+                      setUploadState("idle");
+                      setUploadError("");
+                      if (fileRef.current) fileRef.current.value = "";
+                    }}
+                  >
+                    Clear Upload
+                  </button>
+                ) : null}
+                {uploadState === "error" && uploadError ? <div className="uploadErr">{uploadError}</div> : null}
               </div>
             ) : null}
 
@@ -356,7 +429,10 @@ export default function DynamicProductDetailPage() {
                 className="primaryBuyBtn"
                 type="button"
                 onClick={() => {
-                  cart.addItem({ ...product, price: displayPrice, original: displayOriginal ?? product.original }, { qty, options: opts });
+                  cart.addItem(
+                    { ...product, price: displayPrice, original: displayOriginal ?? product.original },
+                    { qty, options: cartOptions },
+                  );
                 }}
               >
                 Add To Cart
@@ -377,7 +453,7 @@ export default function DynamicProductDetailPage() {
                   }
                   cart.addItem(
                     { ...product, price: displayPrice, original: displayOriginal ?? product.original },
-                    { qty, options: opts, openDrawer: true },
+                    { qty, options: cartOptions, openDrawer: true },
                   );
                 }}
               >

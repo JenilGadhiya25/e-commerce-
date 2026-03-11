@@ -160,9 +160,18 @@ export default function AdminOrdersPage() {
                         {it.options ? (
                           <div className="adminOrderItem__opts">
                             {Object.entries(it.options)
+                              .filter(([k]) => k !== "designUploadId" && k !== "designFilename")
                               .map(([k, v]) => `${k}: ${v}`)
                               .join(" • ")}
                           </div>
+                        ) : null}
+                        {it.options?.designUploadId ? (
+                          <img
+                            className="adminUploadThumb"
+                            src={`/api/uploads/${encodeURIComponent(it.options.designUploadId)}`}
+                            alt="Uploaded design"
+                            loading="lazy"
+                          />
                         ) : null}
                       </div>
                     ))}
