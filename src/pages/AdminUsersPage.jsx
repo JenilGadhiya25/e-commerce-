@@ -17,6 +17,11 @@ function formatDate(iso) {
 export default function AdminUsersPage() {
   const [users, setUsers] = useState(() => (import.meta.env.PROD ? [] : listUsers()));
   const [note, setNote] = useState("");
+  const [editId, setEditId] = useState("");
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -80,6 +85,56 @@ export default function AdminUsersPage() {
     };
   }, [load]);
 
+  async function onSaveEdit(e) {
+    e?.preventDefault?.();
+    if (!editId) return;
+    setActionError("");
+    setBusy(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(editId)}`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name: editName, phone: editPhone }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) {
+        setActionError(data?.error || `Failed to update user (HTTP ${res.status}).`);
+        setBusy(false);
+        return;
+      }
+      setEditId("");
+      setEditName("");
+      setEditPhone("");
+      setBusy(false);
+      await load();
+    } catch {
+      setActionError("API not reachable.");
+      setBusy(false);
+    }
+  }
+
+  async function onDelete(id) {
+    const ok = window.confirm("Delete this user?");
+    if (!ok) return;
+    setActionError("");
+    setBusy(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(id)}`, { method: "DELETE", credentials: "include" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) {
+        setActionError(data?.error || `Failed to delete user (HTTP ${res.status}).`);
+        setBusy(false);
+        return;
+      }
+      setBusy(false);
+      await load();
+    } catch {
+      setActionError("API not reachable.");
+      setBusy(false);
+    }
+  }
+
   return (
     <section className="adminPage" aria-label="Admin users">
       <div className="container">
@@ -101,6 +156,43 @@ export default function AdminUsersPage() {
 
         <div className="adminCard">
           <div className="adminCard__title">All Users</div>
+          {editId ? (
+            <form className="adminProdEdit" onSubmit={onSaveEdit} aria-label="Edit user">
+              <div className="adminProdRow">
+                <label className="authLabel">
+                  <span>Name</span>
+                  <input className="authInput" value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Full name" />
+                </label>
+                <label className="authLabel">
+                  <span>Phone</span>
+                  <input className="authInput" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="+91..." inputMode="tel" />
+                </label>
+              </div>
+              <div className="adminProdEdit__actions">
+                <button className="adminMiniBtn adminMiniBtn--edit" type="submit" disabled={busy}>
+                  Save
+                </button>
+                <button
+                  className="adminMiniBtn"
+                  type="button"
+                  onClick={() => {
+                    setEditId("");
+                    setEditName("");
+                    setEditPhone("");
+                  }}
+                  disabled={busy}
+                >
+                  Cancel
+                </button>
+              </div>
+              {actionError ? <div className="authError">{actionError}</div> : null}
+            </form>
+          ) : actionError ? (
+            <div className="authError" style={{ marginTop: 10 }}>
+              {actionError}
+            </div>
+          ) : null}
+
           {users.length === 0 ? (
             <div className="adminEmpty">No users yet.</div>
           ) : (
@@ -110,6 +202,7 @@ export default function AdminUsersPage() {
                 <div role="columnheader">Email</div>
                 <div role="columnheader">Phone</div>
                 <div role="columnheader">Last Login</div>
+                <div role="columnheader">Actions</div>
               </div>
               {users.map((u) => (
                 <div key={u.id} className="adminUsersRow" role="row">
@@ -124,6 +217,26 @@ export default function AdminUsersPage() {
                   </div>
                   <div role="cell" className="adminUsersCell">
                     {formatDate(u.lastLoginAt)}
+                  </div>
+                  <div role="cell" className="adminUsersCell adminUsersCell--actions">
+                    <div className="adminUsersActions">
+                      <button
+                        className="adminMiniBtn adminMiniBtn--edit"
+                        type="button"
+                        disabled={busy}
+                        onClick={() => {
+                          setActionError("");
+                          setEditId(u.id);
+                          setEditName(u.name || "");
+                          setEditPhone(u.phone || "");
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button className="adminMiniBtn adminMiniBtn--delete" type="button" disabled={busy} onClick={() => onDelete(u.id)}>
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

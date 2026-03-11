@@ -278,6 +278,29 @@ function createFileStore() {
       save(USERS_FILE, next);
       return nextUser;
     },
+    async updateUser(id, patch) {
+      const users = list(USERS_FILE);
+      const idx = users.findIndex((u) => u?.id === id);
+      if (idx < 0) return null;
+      const existing = users[idx];
+      const nextUser = {
+        ...existing,
+        name: patch?.name !== undefined ? normalizeName(patch.name) : existing.name,
+        phone: patch?.phone !== undefined ? normalizePhone(patch.phone) : existing.phone,
+        updatedAt: new Date().toISOString(),
+      };
+      const next = [...users];
+      next[idx] = nextUser;
+      save(USERS_FILE, next);
+      return nextUser;
+    },
+    async deleteUser(id) {
+      const users = list(USERS_FILE);
+      const next = users.filter((u) => u?.id !== id);
+      if (next.length === users.length) return false;
+      save(USERS_FILE, next);
+      return true;
+    },
 
     async listProducts() {
       return list(PRODUCTS_FILE);
@@ -475,6 +498,21 @@ function createMongoStore() {
         { upsert: true },
       );
       return await users.findOne({ id }, { projection: { _id: 0 } });
+    },
+    async updateUser(id, patch) {
+      const $set = { updatedAt: new Date().toISOString() };
+      if (patch?.name !== undefined) $set.name = normalizeName(patch.name);
+      if (patch?.phone !== undefined) $set.phone = normalizePhone(patch.phone);
+      const res = await users.findOneAndUpdate(
+        { id },
+        { $set },
+        { returnDocument: "after", projection: { _id: 0 } },
+      );
+      return res.value || null;
+    },
+    async deleteUser(id) {
+      const res = await users.deleteOne({ id });
+      return res.deletedCount > 0;
     },
 
     async listProducts() {
@@ -798,6 +836,26 @@ export async function handleApiRequest(req, res) {
     if (!name || !email || !email.includes("@") || !phone) return json(res, 400, { ok: false, error: "Missing name/email/phone." });
     const user = await store.upsertUser({ name, email, phone });
     json(res, 200, { ok: true, user });
+    return;
+  }
+
+  if (req.method === "PUT" && pathname.startsWith("/api/users/")) {
+    if (!requireAdmin(req)) return json(res, 401, { ok: false, error: "Unauthorized" });
+    const id = decodeURIComponent(pathname.slice("/api/users/".length));
+    const body = await readBody(req);
+    if (!body) return json(res, 400, { ok: false, error: "Invalid JSON body." });
+    const updated = await store.updateUser(id, { name: body.name, phone: body.phone });
+    if (!updated) return json(res, 404, { ok: false, error: "User not found" });
+    json(res, 200, { ok: true, user: updated });
+    return;
+  }
+
+  if (req.method === "DELETE" && pathname.startsWith("/api/users/")) {
+    if (!requireAdmin(req)) return json(res, 401, { ok: false, error: "Unauthorized" });
+    const id = decodeURIComponent(pathname.slice("/api/users/".length));
+    const ok = await store.deleteUser(id);
+    if (!ok) return json(res, 404, { ok: false, error: "User not found" });
+    json(res, 200, { ok: true });
     return;
   }
 
