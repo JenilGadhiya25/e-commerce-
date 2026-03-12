@@ -14,7 +14,7 @@ function closeNav() {
   if (btn) btn.setAttribute("aria-expanded", "false");
 }
 
-function openNav() {
+function openNav() { 
   document.body.classList.add("nav-open");
   const btn = document.querySelector(".nav-toggle");
   if (btn) btn.setAttribute("aria-expanded", "true");
