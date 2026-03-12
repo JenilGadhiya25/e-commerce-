@@ -39,6 +39,8 @@ const ORDERS_FILE = path.join(DATA_DIR, "orders.json");
 const PRODUCTS_FILE = path.join(DATA_DIR, "products.json");
 const NOTIFS_FILE = path.join(DATA_DIR, "notifications.json");
 const UPLOADS_FILE = path.join(DATA_DIR, "uploads.json");
+const CARTS_FILE = path.join(DATA_DIR, "carts.json");
+const WISHLISTS_FILE = path.join(DATA_DIR, "wishlists.json");
 
 function ensureDataDir() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -415,6 +417,38 @@ function createFileStore() {
       return true;
     },
 
+    async getCart(customerId) {
+      const id = String(customerId || "").trim();
+      const rows = list(CARTS_FILE);
+      return rows.find((c) => c?.customerId === id) || { customerId: id, items: [], updatedAt: null };
+    },
+    async setCart(customerId, items) {
+      const id = String(customerId || "").trim();
+      const existing = list(CARTS_FILE);
+      const now = new Date().toISOString();
+      const nextCart = { customerId: id, items: Array.isArray(items) ? items : [], updatedAt: now };
+      const idx = existing.findIndex((c) => c?.customerId === id);
+      const next = idx >= 0 ? existing.map((c, i) => (i === idx ? nextCart : c)) : [nextCart, ...existing];
+      save(CARTS_FILE, next);
+      return nextCart;
+    },
+
+    async getWishlist(customerId) {
+      const id = String(customerId || "").trim();
+      const rows = list(WISHLISTS_FILE);
+      return rows.find((w) => w?.customerId === id) || { customerId: id, items: [], updatedAt: null };
+    },
+    async setWishlist(customerId, items) {
+      const id = String(customerId || "").trim();
+      const existing = list(WISHLISTS_FILE);
+      const now = new Date().toISOString();
+      const nextWishlist = { customerId: id, items: Array.isArray(items) ? items : [], updatedAt: now };
+      const idx = existing.findIndex((w) => w?.customerId === id);
+      const next = idx >= 0 ? existing.map((w, i) => (i === idx ? nextWishlist : w)) : [nextWishlist, ...existing];
+      save(WISHLISTS_FILE, next);
+      return nextWishlist;
+    },
+
     async importData({ users: nextUsers = [], products: nextProducts = [], orders: nextOrders = [] } = {}) {
       const existingUsers = list(USERS_FILE);
       const existingProducts = list(PRODUCTS_FILE);
@@ -666,6 +700,36 @@ function createMongoStore() {
       await uploads.insertOne(upload);
       return upload;
     },
+
+    async getCart(customerId) {
+      const doc = await carts.findOne({ customerId }, { projection: { _id: 0 } });
+      return doc || { customerId, items: [], updatedAt: null };
+    },
+    async setCart(customerId, items) {
+      const now = new Date().toISOString();
+      const safeItems = Array.isArray(items) ? items : [];
+      await carts.updateOne(
+        { customerId },
+        { $set: { customerId, items: safeItems, updatedAt: now }, $setOnInsert: { createdAt: now } },
+        { upsert: true },
+      );
+      return await carts.findOne({ customerId }, { projection: { _id: 0 } });
+    },
+
+    async getWishlist(customerId) {
+      const doc = await wishlists.findOne({ customerId }, { projection: { _id: 0 } });
+      return doc || { customerId, items: [], updatedAt: null };
+    },
+    async setWishlist(customerId, items) {
+      const now = new Date().toISOString();
+      const safeItems = Array.isArray(items) ? items : [];
+      await wishlists.updateOne(
+        { customerId },
+        { $set: { customerId, items: safeItems, updatedAt: now }, $setOnInsert: { createdAt: now } },
+        { upsert: true },
+      );
+      return await wishlists.findOne({ customerId }, { projection: { _id: 0 } });
+    },
   };
 }
 
@@ -894,6 +958,46 @@ export async function handleApiRequest(req, res) {
     if (!name || !email || !email.includes("@") || !phone) return json(res, 400, { ok: false, error: "Missing name/email/phone." });
     const user = await store.upsertUser({ name, email, phone });
     json(res, 200, { ok: true, user });
+    return;
+  }
+
+  // Cart (customer-scoped)
+  if (req.method === "GET" && pathname === "/api/cart") {
+    const customerId = String(url.searchParams.get("customerId") || "").trim();
+    if (!customerId) return json(res, 400, { ok: false, error: "Missing customerId" });
+    const cart = await store.getCart(customerId);
+    json(res, 200, { ok: true, customerId, items: cart?.items || [], updatedAt: cart?.updatedAt || null });
+    return;
+  }
+
+  if (req.method === "PUT" && pathname === "/api/cart") {
+    const body = await readBody(req);
+    if (!body) return json(res, 400, { ok: false, error: "Invalid JSON body." });
+    const customerId = String(body.customerId || "").trim();
+    if (!customerId) return json(res, 400, { ok: false, error: "Missing customerId" });
+    const items = Array.isArray(body.items) ? body.items : [];
+    const next = await store.setCart(customerId, items);
+    json(res, 200, { ok: true, customerId, items: next?.items || [], updatedAt: next?.updatedAt || null });
+    return;
+  }
+
+  // Wishlist (customer-scoped)
+  if (req.method === "GET" && pathname === "/api/wishlist") {
+    const customerId = String(url.searchParams.get("customerId") || "").trim();
+    if (!customerId) return json(res, 400, { ok: false, error: "Missing customerId" });
+    const wishlist = await store.getWishlist(customerId);
+    json(res, 200, { ok: true, customerId, items: wishlist?.items || [], updatedAt: wishlist?.updatedAt || null });
+    return;
+  }
+
+  if (req.method === "PUT" && pathname === "/api/wishlist") {
+    const body = await readBody(req);
+    if (!body) return json(res, 400, { ok: false, error: "Invalid JSON body." });
+    const customerId = String(body.customerId || "").trim();
+    if (!customerId) return json(res, 400, { ok: false, error: "Missing customerId" });
+    const items = Array.isArray(body.items) ? body.items : [];
+    const next = await store.setWishlist(customerId, items);
+    json(res, 200, { ok: true, customerId, items: next?.items || [], updatedAt: next?.updatedAt || null });
     return;
   }
 

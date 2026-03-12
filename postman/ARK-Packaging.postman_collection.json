@@ -18,6 +18,76 @@
       }
     },
     {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Admin Login (sets cookie)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"ark@123\"\n}" },
+            "url": "{{baseUrl}}/api/admin/login"
+          }
+        },
+        {
+          "name": "Admin Me",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/me"
+          }
+        },
+        {
+          "name": "Admin Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/admin/logout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cart",
+      "item": [
+        {
+          "name": "Get Cart",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/cart?customerId=vipul@example.com"
+          }
+        },
+        {
+          "name": "Set Cart",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"customerId\": \"vipul@example.com\",\n  \"items\": []\n}" },
+            "url": "{{baseUrl}}/api/cart"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wishlist",
+      "item": [
+        {
+          "name": "Get Wishlist",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/wishlist?customerId=vipul@example.com"
+          }
+        },
+        {
+          "name": "Set Wishlist",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"customerId\": \"vipul@example.com\",\n  \"items\": []\n}" },
+            "url": "{{baseUrl}}/api/wishlist"
+          }
+        }
+      ]
+    },
+    {
       "name": "Users",
       "item": [
         {
@@ -89,8 +159,8 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"customerId\": \"vipul@example.com\"\n}" },
-            "url": "{{baseUrl}}/api/orders/{{orderId}}/cancel"
+            "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"customerId\": \"vipul@example.com\"\n}" },
+            "url": "{{baseUrl}}/api/ordersCancel"
           }
         },
         {
@@ -98,36 +168,47 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"customerId\": \"vipul@example.com\"\n}" },
-            "url": "{{baseUrl}}/api/orders/{{orderId}}/remove"
+            "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"customerId\": \"vipul@example.com\"\n}" },
+            "url": "{{baseUrl}}/api/ordersRemove"
           }
         },
         {
           "name": "Set ETA Days (Admin)",
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "x-admin-key", "value": "{{adminKey}}" }
-            ],
-            "body": { "mode": "raw", "raw": "{\n  \"etaDays\": 2\n}" },
-            "url": "{{baseUrl}}/api/orders/{{orderId}}/eta"
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"etaDays\": 2\n}" },
+            "url": "{{baseUrl}}/api/ordersEta"
           }
         },
         {
           "name": "Mark Paid (Admin)",
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "x-admin-key", "value": "{{adminKey}}" }
-            ],
-            "body": { "mode": "raw", "raw": "{}" },
-            "url": "{{baseUrl}}/api/orders/{{orderId}}/paid"
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"{{orderId}}\"\n}" },
+            "url": "{{baseUrl}}/api/ordersPaid"
+          }
+        },
+        {
+          "name": "Confirm Order (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"{{orderId}}\"\n}" },
+            "url": "{{baseUrl}}/api/ordersConfirm"
+          }
+        },
+        {
+          "name": "Delete Order (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"{{orderId}}\"\n}" },
+            "url": "{{baseUrl}}/api/ordersDelete"
           }
         }
       ]
     }
   ]
 }
-
