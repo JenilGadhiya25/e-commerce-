@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { confirmOrderByAdminApi, deleteOrderByAdminApi } from "../orders/orderStore.js";
 import { useOrders, useOrdersApiStatus } from "../orders/useOrders.js";
 import { IconCalendar } from "../components/icons/Icons.jsx";
+import { uploadUrl } from "../uploads/uploadClient.js";
 
 function formatINR(value) {
   return value.toLocaleString("en-IN", { style: "currency", currency: "INR" });
@@ -168,7 +169,7 @@ export default function AdminOrdersPage() {
                         {it.options?.designUploadId ? (
                           <img
                             className="adminUploadThumb"
-                            src={`/api/uploads/${encodeURIComponent(it.options.designUploadId)}`}
+                            src={uploadUrl(it.options.designUploadId)}
                             alt="Uploaded design"
                             loading="lazy"
                           />

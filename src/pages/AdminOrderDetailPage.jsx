@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { refreshOrders, setOrderEtaDays } from "../orders/orderStore.js";
 import { useOrder } from "../orders/useOrders.js";
+import { uploadUrl } from "../uploads/uploadClient.js";
 
 function formatINR(value) {
   return value.toLocaleString("en-IN", { style: "currency", currency: "INR" });
@@ -105,7 +106,7 @@ export default function AdminOrderDetailPage() {
                 {it.options?.designUploadId ? (
                   <div className="adminUpload" aria-label="Uploaded design">
                     <div className="adminUpload__label">Uploaded image</div>
-                    <img className="adminUpload__img" src={`/api/uploads/${encodeURIComponent(it.options.designUploadId)}`} alt="Uploaded design" />
+                    <img className="adminUpload__img" src={uploadUrl(it.options.designUploadId)} alt="Uploaded design" />
                   </div>
                 ) : null}
               </div>

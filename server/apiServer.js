@@ -974,6 +974,127 @@ export async function handleApiRequest(req, res) {
     return;
   }
 
+  // Order actions (Vercel-safe static endpoints: avoids dynamic route limitations)
+  if (req.method === "POST" && pathname === "/api/ordersconfirm") {
+    if (!requireAdmin(req)) return json(res, 401, { ok: false, error: "Unauthorized" });
+    const body = await readBody(req);
+    if (!body) return json(res, 400, { ok: false, error: "Invalid JSON body." });
+    const orderId = decodeURIComponent(String(body.orderId || "").trim());
+    if (!orderId) return json(res, 400, { ok: false, error: "Missing orderId." });
+    const order = await store.getOrder(orderId);
+    if (!order) return json(res, 404, { ok: false, error: "Order not found" });
+    if (order.status === "CONFIRMED") return json(res, 200, { ok: true, order });
+    if (order.status !== "PENDING") return json(res, 400, { ok: false, error: "Only pending orders can be confirmed." });
+    const updated = await store.updateOrderGuarded(
+      { id: orderId, fromStatuses: ["PENDING"] },
+      { status: "CONFIRMED", confirmedAt: new Date().toISOString(), cancelledAt: null, removedAt: null },
+    );
+    if (!updated) return json(res, 409, { ok: false, error: "Order status changed. Please refresh." });
+    if (updated?.customer?.id) {
+      const notif = makeNotification({
+        customerId: updated.customer.id,
+        title: "Order Confirmed",
+        message: "Your order has been confirmed by admin.",
+        orderId: updated.id,
+        type: "ORDER",
+      });
+      await store.createNotification(notif);
+    }
+    json(res, 200, { ok: true, order: updated });
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/api/ordersdelete") {
+    if (!requireAdmin(req)) return json(res, 401, { ok: false, error: "Unauthorized" });
+    const body = await readBody(req);
+    if (!body) return json(res, 400, { ok: false, error: "Invalid JSON body." });
+    const orderId = decodeURIComponent(String(body.orderId || "").trim());
+    if (!orderId) return json(res, 400, { ok: false, error: "Missing orderId." });
+    const ok = await store.deleteOrder(orderId);
+    if (!ok) return json(res, 404, { ok: false, error: "Not found" });
+    json(res, 200, { ok: true });
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/api/orderscancel") {
+    const body = await readBody(req);
+    if (!body) return json(res, 400, { ok: false, error: "Invalid JSON body." });
+    const orderId = decodeURIComponent(String(body.orderId || "").trim());
+    const customerId = String(body.customerId || "").trim();
+    if (!orderId || !customerId) return json(res, 400, { ok: false, error: "Missing orderId/customerId." });
+    const order = await store.getOrder(orderId);
+    if (!order) return json(res, 404, { ok: false, error: "Order not found" });
+    const v = validateCustomerAction({ customerId }, order);
+    if (!v.ok) return json(res, 403, { ok: false, error: v.error });
+    if (order.status === "CONFIRMED") return json(res, 400, { ok: false, error: "Confirmed orders cannot be cancelled." });
+    if (order.status === "REMOVED" || order.status === "CANCELLED") return json(res, 200, { ok: true, order });
+    const updated = await store.updateOrderGuarded(
+      { id: orderId, customerId: v.value.customerId, fromStatuses: ["PENDING"] },
+      { status: "CANCELLED", cancelledAt: new Date().toISOString() },
+    );
+    if (!updated) {
+      const fresh = await store.getOrder(orderId);
+      if (!fresh) return json(res, 404, { ok: false, error: "Order not found" });
+      return json(res, 200, { ok: true, order: fresh });
+    }
+    json(res, 200, { ok: true, order: updated });
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/api/ordersremove") {
+    const body = await readBody(req);
+    if (!body) return json(res, 400, { ok: false, error: "Invalid JSON body." });
+    const orderId = decodeURIComponent(String(body.orderId || "").trim());
+    const customerId = String(body.customerId || "").trim();
+    if (!orderId || !customerId) return json(res, 400, { ok: false, error: "Missing orderId/customerId." });
+    const order = await store.getOrder(orderId);
+    if (!order) return json(res, 404, { ok: false, error: "Order not found" });
+    const v = validateCustomerAction({ customerId }, order);
+    if (!v.ok) return json(res, 403, { ok: false, error: v.error });
+    if (order.status === "CONFIRMED") return json(res, 400, { ok: false, error: "Confirmed orders cannot be removed." });
+    if (order.status === "REMOVED") return json(res, 200, { ok: true, order });
+    const updated = await store.updateOrderGuarded(
+      { id: orderId, customerId: v.value.customerId, fromStatuses: ["PENDING"] },
+      { status: "REMOVED", removedAt: new Date().toISOString() },
+    );
+    if (!updated) {
+      const fresh = await store.getOrder(orderId);
+      if (!fresh) return json(res, 404, { ok: false, error: "Order not found" });
+      return json(res, 200, { ok: true, order: fresh });
+    }
+    json(res, 200, { ok: true, order: updated });
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/api/orderseta") {
+    if (!requireAdmin(req)) return json(res, 401, { ok: false, error: "Unauthorized" });
+    const body = await readBody(req);
+    if (!body) return json(res, 400, { ok: false, error: "Invalid JSON body." });
+    const orderId = decodeURIComponent(String(body.orderId || "").trim());
+    if (!orderId) return json(res, 400, { ok: false, error: "Missing orderId." });
+    const etaDaysRaw = body.etaDays;
+    const n = etaDaysRaw === null || etaDaysRaw === "" ? null : Number(etaDaysRaw);
+    if (n !== null && (!Number.isFinite(n) || n < 0)) return json(res, 400, { ok: false, error: "Invalid etaDays" });
+    const updated = await store.updateOrder(orderId, { etaDays: n === null ? null : Math.round(n) });
+    if (!updated) return json(res, 404, { ok: false, error: "Order not found" });
+    json(res, 200, { ok: true, order: updated });
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/api/orderspaid") {
+    if (!requireAdmin(req)) return json(res, 401, { ok: false, error: "Unauthorized" });
+    const body = await readBody(req);
+    if (!body) return json(res, 400, { ok: false, error: "Invalid JSON body." });
+    const orderId = decodeURIComponent(String(body.orderId || "").trim());
+    if (!orderId) return json(res, 400, { ok: false, error: "Missing orderId." });
+    const order = await store.getOrder(orderId);
+    if (!order) return json(res, 404, { ok: false, error: "Order not found" });
+    if (order.paymentStatus === "PAID") return json(res, 200, { ok: true, order });
+    const updated = await store.updateOrder(orderId, { paymentStatus: "PAID", paidAt: new Date().toISOString() });
+    json(res, 200, { ok: true, order: updated });
+    return;
+  }
+
   if (req.method === "GET" && pathname.startsWith("/api/orders/")) {
     const rest = pathname.slice("/api/orders/".length);
     const [id, action] = rest.split("/").filter(Boolean);
@@ -1194,6 +1315,23 @@ export async function handleApiRequest(req, res) {
     };
     await store.createUpload(upload);
     json(res, 200, { ok: true, upload: { id: upload.id, url: `/api/uploads/${encodeURIComponent(upload.id)}`, filename } });
+    return;
+  }
+
+  // Vercel-safe upload getter (avoids dynamic routes): /api/uploadGet?id=...
+  if (req.method === "GET" && pathname === "/api/uploadget") {
+    const id = String(url.searchParams.get("id") || "").trim();
+    if (!id) return json(res, 400, { ok: false, error: "Missing id" });
+    const upload = await store.getUpload(id);
+    if (!upload) return json(res, 404, { ok: false, error: "Not found" });
+    let buf = null;
+    try {
+      buf = Buffer.from(String(upload.dataBase64 || ""), "base64");
+    } catch {
+      buf = null;
+    }
+    if (!buf || !buf.length) return json(res, 404, { ok: false, error: "Not found" });
+    sendBinary(res, { status: 200, contentType: upload.contentType || "application/octet-stream", buffer: buf, filename: upload.filename });
     return;
   }
 

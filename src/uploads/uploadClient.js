@@ -32,6 +32,5 @@ export async function uploadDesignImage({ file, customerId }) {
 }
 
 export function uploadUrl(uploadId) {
-  return uploadId ? `/api/uploads/${encodeURIComponent(uploadId)}` : "";
+  return uploadId ? `/api/uploadGet?id=${encodeURIComponent(uploadId)}` : "";
 }
-

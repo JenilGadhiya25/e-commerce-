@@ -155,10 +155,10 @@ export function updateOrder(orderId, updater) {
 
 export async function removeOrderByCustomer({ orderId, customerId }) {
   try {
-    const { res, data } = await apiJson(`/api/orders/${encodeURIComponent(orderId)}/remove`, {
+    const { res, data } = await apiJson(`/api/ordersRemove`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ customerId }),
+      body: JSON.stringify({ orderId, customerId }),
     });
     if (res.ok && data?.ok && data.order) {
       updateOrder(orderId, () => data.order);
@@ -183,10 +183,10 @@ export async function removeOrderByCustomer({ orderId, customerId }) {
 
 export async function cancelOrderByCustomer({ orderId, customerId }) {
   try {
-    const { res, data } = await apiJson(`/api/orders/${encodeURIComponent(orderId)}/cancel`, {
+    const { res, data } = await apiJson(`/api/ordersCancel`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ customerId }),
+      body: JSON.stringify({ orderId, customerId }),
     });
     if (res.ok && data?.ok && data.order) {
       updateOrder(orderId, () => data.order);
@@ -218,11 +218,11 @@ export async function setOrderEtaDays({ orderId, etaDays }) {
   const n = etaDays === null || etaDays === "" ? null : Number(etaDays);
   if (n !== null && (!Number.isFinite(n) || n < 0)) return null;
   try {
-    const { res, data } = await apiJson(`/api/orders/${encodeURIComponent(orderId)}/eta`, {
+    const { res, data } = await apiJson(`/api/ordersEta`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ etaDays: n }),
+      body: JSON.stringify({ orderId, etaDays: n }),
     });
     if (res.ok && data?.ok && data.order) {
       updateOrder(orderId, () => data.order);
@@ -240,11 +240,11 @@ export async function setOrderEtaDays({ orderId, etaDays }) {
 
 export async function markOrderPaid(orderId) {
   try {
-    const { res, data } = await apiJson(`/api/orders/${encodeURIComponent(orderId)}/paid`, {
+    const { res, data } = await apiJson(`/api/ordersPaid`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({}),
+      body: JSON.stringify({ orderId }),
     });
     if (res.ok && data?.ok && data.order) {
       updateOrder(orderId, () => data.order);
@@ -281,11 +281,11 @@ export function deleteOrderByAdmin(orderId) {
 
 export async function confirmOrderByAdminApi(orderId) {
   try {
-    const { res, data } = await apiJson(`/api/orders/${encodeURIComponent(orderId)}/confirm`, {
+    const { res, data } = await apiJson(`/api/ordersConfirm`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({}),
+      body: JSON.stringify({ orderId }),
     });
     if (res.ok && data?.ok && data.order) {
       updateOrder(orderId, () => data.order);
@@ -305,7 +305,12 @@ export async function confirmOrderByAdminApi(orderId) {
 
 export async function deleteOrderByAdminApi(orderId) {
   try {
-    const { res, data } = await apiJson(`/api/orders/${encodeURIComponent(orderId)}`, { method: "DELETE", credentials: "include" });
+    const { res, data } = await apiJson(`/api/ordersDelete`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ orderId }),
+    });
     if (res.ok && data?.ok) {
       deleteOrderByAdmin(orderId);
       return { ok: true };
