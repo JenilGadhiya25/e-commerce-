@@ -26,7 +26,7 @@
       {
         "id": "plain-frosted-8x10",
         "title": "8 X 10 Inch Plain Frosted Zipper Bags",
-        "image": "/src/assets/product-frosted-plain.svg",
+        "image": "https://image.made-in-china.com/202f0j00zHEbpZTtujri/Customized-Print-Logo-Pink-Zipper-Bag-PVC-EVA-Frosted-Plastic-Zip-Lock-Packaging-Transparent-Clear-Bag-for-Clothing.webp",
         "href": null,
         "price": 20.9
       },
@@ -36,8 +36,36 @@
         "image": "/src/assets/product-frosted-plain.svg",
         "href": null,
         "price": 26.55
+      },
+      {
+        "id": "plain-polyethylene-bag-capacity-1kg-2kg-5kg-at-120-kg-i-d3f6af",
+        "title": "Plain Polyethylene Bag, Capacity: 1kg, 2kg, 5kg at ₹ 120/kg",
+        "image": "https://files.printo.in/site/20230215_225538014627_b18c44_Courier-poly-bag.jpg",
+        "href": "/product/plain-polyethylene-bag-capacity-1kg-2kg-5kg-at-120-kg-i-d3f6af",
+        "price": 12
+      },
+      {
+        "id": "printed-plastic-bag-at-140-kg-plastic-printed-bag-in-sattur-53ef69",
+        "title": "Printed Plastic Bag at ₹ 140/kg | Plastic Printed Bag in Sattur |",
+        "image": "https://5.imimg.com/data5/ANDROID/Default/2025/2/490186030/QX/PT/TI/148161804/product-jpeg-500x500.jpg",
+        "href": "/product/printed-plastic-bag-at-140-kg-plastic-printed-bag-in-sattur-53ef69",
+        "price": 15
+      },
+      {
+        "id": "plain-frosted-6x8",
+        "title": "6 X 8 Inch Plain Frosted Zipper Bags",
+        "image": "https://pzielng.com/assets/products/branded-plastic-nylon-gift-shopping-packaging-delivery-bag-design-and-printing-in-lagos-abuja-nigeria.jpg",
+        "href": null,
+        "price": 19.4
+      },
+      {
+        "id": "plain-frosted-10x12",
+        "title": "10 X 12 Inch Plain Frosted Zipper Bags",
+        "image": "https://s.alicdn.com/@sc04/kf/H1fb1ab828bab4b4389574e152c8f1713c/High-Quantity-Custom-Logo-Printing-Eco-Friendly-Biodegradable-Poly-Express-Parcel-Mailer-Shipping-Bags-for-Clothing.jpg_300x300.jpg",
+        "href": null,
+        "price": 22.8
       }
     ],
-    "updatedAt": "2026-03-14T11:07:02.000Z"
+    "updatedAt": "2026-03-14T11:11:47.676Z"
   }
 ]
