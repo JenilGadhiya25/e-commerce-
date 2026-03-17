@@ -110,7 +110,7 @@ export async function createOrder({ customer, items, subtotal }) {
         status: "PENDING",
         removedAt: null,
         cancelledAt: null,
-        etaDays: null,
+        etaDays: 10,
         paymentStatus: "PENDING",
         paidAt: null,
         customer,
